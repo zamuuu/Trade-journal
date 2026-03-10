@@ -1,65 +1,117 @@
-import Image from "next/image";
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+import { prisma } from "@/lib/db";
+import { calculateMetrics } from "@/lib/calculations/metrics";
+import { getDashboardConfig } from "@/actions/dashboard-actions";
+import { WidgetGrid } from "@/components/dashboard/widget-grid";
+import { SetupStats, DailyPnl } from "@/types";
+
+export default async function DashboardPage() {
+  const [trades, recentTrades, widgetConfig] = await Promise.all([
+    prisma.trade.findMany({
+      where: { status: "CLOSED" },
+      orderBy: { entryDate: "asc" },
+      select: {
+        id: true,
+        symbol: true,
+        side: true,
+        status: true,
+        entryDate: true,
+        pnl: true,
+        totalQuantity: true,
+        avgEntryPrice: true,
+        avgExitPrice: true,
+        setup: true,
+      },
+    }),
+    prisma.trade.findMany({
+      orderBy: { entryDate: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        symbol: true,
+        side: true,
+        entryDate: true,
+        pnl: true,
+        totalQuantity: true,
+      },
+    }),
+    getDashboardConfig(),
+  ]);
+
+  const metrics = calculateMetrics(trades);
+
+  // Build cumulative PnL data for chart
+  let cumulative = 0;
+  const pnlData = trades.map((t) => {
+    cumulative += t.pnl;
+    return {
+      date: t.entryDate.toISOString(),
+      pnl: t.pnl,
+      cumulative: Math.round(cumulative * 100) / 100,
+    };
+  });
+
+  // Aggregate P&L by setup
+  const setupMap = new Map<
+    string,
+    { netPnl: number; wins: number; losses: number; total: number }
+  >();
+  for (const t of trades) {
+    if (!t.setup) continue;
+    const key = t.setup;
+    const entry = setupMap.get(key) ?? { netPnl: 0, wins: 0, losses: 0, total: 0 };
+    entry.netPnl += t.pnl;
+    entry.total++;
+    if (t.pnl > 0) entry.wins++;
+    else if (t.pnl < 0) entry.losses++;
+    setupMap.set(key, entry);
+  }
+  const setupStats: SetupStats[] = Array.from(setupMap.entries())
+    .map(([setup, s]) => ({
+      setup,
+      netPnl: Math.round(s.netPnl * 100) / 100,
+      tradeCount: s.total,
+      winCount: s.wins,
+      lossCount: s.losses,
+      winRate: s.total > 0 ? Math.round((s.wins / s.total) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.netPnl - a.netPnl);
+
+  // Build last 7 calendar days with aggregated PnL
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const last7Days: DailyPnl[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10); // YYYY-MM-DD
+    last7Days.push({ date: dateStr, pnl: 0, tradeCount: 0 });
+  }
+  // Map trades into the 7-day buckets
+  const dayMap = new Map(last7Days.map((d) => [d.date, d]));
+  for (const t of trades) {
+    const key = t.entryDate.toISOString().slice(0, 10);
+    const bucket = dayMap.get(key);
+    if (bucket) {
+      bucket.pnl = Math.round((bucket.pnl + t.pnl) * 100) / 100;
+      bucket.tradeCount++;
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <WidgetGrid
+      initialConfig={widgetConfig}
+      data={{
+        metrics,
+        pnlData,
+        recentTrades: recentTrades.map((t) => ({
+          ...t,
+          entryDate: t.entryDate.toISOString(),
+        })),
+        setupStats,
+        last7Days,
+      }}
+    />
   );
 }

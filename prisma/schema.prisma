@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -8,4 +5,88 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+}
+
+model Trade {
+  id            String   @id @default(cuid())
+  symbol        String
+  side          String   // "LONG" or "SHORT"
+  status        String   // "OPEN" or "CLOSED"
+  entryDate     DateTime
+  exitDate      DateTime?
+  totalQuantity Int
+  avgEntryPrice Float
+  avgExitPrice  Float?
+  pnl           Float
+  notes         String?
+  setup         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  executions  Execution[]
+  screenshots Screenshot[]
+  tags        TradeTag[]
+
+  @@index([symbol])
+  @@index([entryDate])
+  @@index([status])
+}
+
+model Execution {
+  id        String   @id @default(cuid())
+  tradeId   String
+  side      String   // "BUY", "SELL", "SELL_SHORT"
+  quantity  Int
+  price     Float
+  timestamp DateTime
+  rawData   String?  // JSON string of original CSV row
+  createdAt DateTime @default(now())
+
+  trade Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@index([tradeId])
+  @@index([timestamp])
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  trades TradeTag[]
+}
+
+model TradeTag {
+  tradeId String
+  tagId   String
+
+  trade Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tradeId, tagId])
+}
+
+model Screenshot {
+  id        String   @id @default(cuid())
+  tradeId   String
+  filePath  String
+  caption   String?
+  category  String   @default("other") // "historical", "intraday", "other"
+  createdAt DateTime @default(now())
+
+  trade Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@index([tradeId])
+}
+
+model NoteTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DashboardConfig {
+  id      String @id @default("default")
+  widgets String // JSON array of { id, enabled, order }
 }

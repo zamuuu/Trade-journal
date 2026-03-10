@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -38,13 +38,17 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  /* Trading semantic colors */
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+  --color-flat: var(--flat);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.5);
+  --radius-4xl: calc(var(--radius) * 3);
 }
 
 :root {
@@ -66,12 +70,15 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-1: oklch(0.646 0.145 155);
+  --chart-2: oklch(0.6 0.16 258);
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
+  --profit: oklch(0.646 0.145 155);
+  --loss: oklch(0.637 0.175 25);
+  --flat: oklch(0.556 0 0);
+  --radius: 0.5rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -82,38 +89,58 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Dark mode: navy trading terminal palette */
+/* Anchored to #101626 (bg) and #1D2333 (card) */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0.00 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Base canvas — #101626 */
+  --background: oklch(0.203 0.033 268);
+  /* Primary text */
+  --foreground: oklch(0.93 0.005 268);
+  /* Elevated surface — #1D2333 */
+  --card: oklch(0.258 0.032 268);
+  --card-foreground: oklch(0.93 0.005 268);
+  /* Popovers/dropdowns — above cards */
+  --popover: oklch(0.30 0.030 268);
+  --popover-foreground: oklch(0.93 0.005 268);
+  /* Primary action */
+  --primary: oklch(0.65 0.06 268);
+  --primary-foreground: oklch(0.98 0.005 268);
+  /* Secondary surfaces */
+  --secondary: oklch(0.27 0.030 268);
+  --secondary-foreground: oklch(0.85 0.01 268);
+  /* Muted/disabled */
+  --muted: oklch(0.27 0.030 268);
+  --muted-foreground: oklch(0.63 0.015 268);
+  /* Hover/active accent */
+  --accent: oklch(0.30 0.030 268);
+  --accent-foreground: oklch(0.93 0.005 268);
+  /* Destructive */
+  --destructive: oklch(0.637 0.175 25);
+  /* Borders — between card and popover lightness */
+  --border: oklch(0.32 0.025 268);
+  /* Input fields — slightly below background for inset feel */
+  --input: oklch(0.22 0.033 268);
+  /* Focus ring */
+  --ring: oklch(0.55 0.06 268);
+  /* Chart palette */
+  --chart-1: oklch(0.65 0.16 155);
+  --chart-2: oklch(0.6 0.16 258);
+  --chart-3: oklch(0.7 0.12 70);
+  --chart-4: oklch(0.637 0.175 25);
+  --chart-5: oklch(0.55 0.06 268);
+  /* Trading semantic */
+  --profit: oklch(0.65 0.16 155);
+  --loss: oklch(0.65 0.19 25);
+  --flat: oklch(0.63 0.015 268);
+  /* Sidebar — same as card (#1D2333) */
+  --sidebar: oklch(0.258 0.032 268);
+  --sidebar-foreground: oklch(0.93 0.005 268);
+  --sidebar-primary: oklch(0.65 0.06 268);
+  --sidebar-primary-foreground: oklch(0.93 0.005 268);
+  --sidebar-accent: oklch(0.30 0.030 268);
+  --sidebar-accent-foreground: oklch(0.93 0.005 268);
+  --sidebar-border: oklch(0.32 0.025 268);
+  --sidebar-ring: oklch(0.55 0.06 268);
 }
 
 @layer base {
@@ -122,8 +149,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   }
-  html {
-    @apply font-sans;
+}
+
+/* Utility classes for trading colors */
+@layer utilities {
+  .text-profit {
+    color: var(--profit);
+  }
+  .text-loss {
+    color: var(--loss);
+  }
+  .text-flat {
+    color: var(--flat);
+  }
+  .bg-profit {
+    background-color: var(--profit);
+  }
+  .bg-loss {
+    background-color: var(--loss);
+  }
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
