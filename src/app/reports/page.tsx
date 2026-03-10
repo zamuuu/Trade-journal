@@ -74,15 +74,12 @@ export default async function ReportsPage() {
     .sort((a, b) => b.pnl - a.pnl);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold">Reports</h1>
-      <ReportCharts
-        cumulativePnl={cumulativePnl}
-        dailyPnl={dailyPnl}
-        drawdownData={drawdownData}
-        winLossDays={{ winDays, lossDays, breakEvenDays }}
-        pnlBySymbol={pnlBySymbol}
-      />
-    </div>
+    <ReportCharts
+      cumulativePnl={cumulativePnl}
+      dailyPnl={dailyPnl}
+      drawdownData={drawdownData}
+      winLossDays={{ winDays, lossDays, breakEvenDays }}
+      pnlBySymbol={pnlBySymbol}
+    />
   );
 }

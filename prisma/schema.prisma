@@ -52,7 +52,8 @@ model Tag {
   id   String @id @default(cuid())
   name String @unique
 
-  trades TradeTag[]
+  trades   TradeTag[]
+  dayNotes DayNoteTag[]
 }
 
 model TradeTag {
@@ -89,4 +90,26 @@ model NoteTemplate {
 model DashboardConfig {
   id      String @id @default("default")
   widgets String // JSON array of { id, enabled, order }
+}
+
+model DayNote {
+  id        String   @id @default(cuid())
+  date      String   @unique  // "YYYY-MM-DD" format
+  notes     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tags DayNoteTag[]
+
+  @@index([date])
+}
+
+model DayNoteTag {
+  dayNoteId String
+  tagId     String
+
+  dayNote DayNote @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([dayNoteId, tagId])
 }

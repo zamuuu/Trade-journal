@@ -14,7 +14,7 @@ import {
 import {
   SortableContext,
   useSortable,
-  rectSortingStrategy,
+  verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -22,7 +22,6 @@ import {
   Pencil,
   Check,
   RotateCcw,
-  Plus,
   GripVertical,
   X,
 } from "lucide-react";
@@ -40,6 +39,7 @@ import { RecentTrades } from "./recent-trades";
 import { AvgWinLossWidget } from "./avg-win-loss-widget";
 import { PnlBySetupWidget } from "./pnl-by-setup-widget";
 import { Last7DaysWidget } from "./last-7-days-widget";
+import { WinLossDonutWidget } from "./win-loss-donut-widget";
 import { WidgetCustomizer } from "./widget-customizer";
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -49,19 +49,16 @@ interface WidgetGridProps {
   data: DashboardData;
 }
 
-// ─── Sortable Widget Wrapper ─────────────────────────────────────
+// ─── Sortable Edit Row (compact list item for edit mode) ─────────
 
-function SortableWidgetWrapper({
+function SortableEditRow({
   id,
-  children,
   onRemove,
-  gridStyle,
 }: {
   id: string;
-  children: React.ReactNode;
   onRemove: () => void;
-  gridStyle?: React.CSSProperties;
 }) {
+  const def = getWidgetDefinition(id);
   const {
     attributes,
     listeners,
@@ -73,35 +70,48 @@ function SortableWidgetWrapper({
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
-    position: "relative",
-    ...gridStyle,
   };
 
+  const sizeLabel = def?.size ?? "stat";
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
+    >
       {/* Drag handle */}
       <button
         ref={setActivatorNodeRef}
         {...listeners}
-        className="absolute -left-1 top-1 z-10 cursor-grab rounded p-1 text-muted-foreground/60 transition-colors hover:text-foreground active:cursor-grabbing"
+        className="cursor-grab text-muted-foreground/60 transition-colors hover:text-foreground active:cursor-grabbing"
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-4 w-4" />
       </button>
 
+      {/* Widget name */}
+      <span className="flex-1 text-sm font-medium">
+        {def?.name ?? id}
+      </span>
+
+      {/* Size badge */}
+      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+        {sizeLabel}
+      </span>
+
       {/* Remove button */}
       <button
         onClick={onRemove}
-        className="absolute right-2 top-2 z-10 rounded p-1 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+        className="rounded p-1 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
         aria-label="Remove widget"
       >
         <X className="h-3.5 w-3.5" />
       </button>
-
-      {children}
     </div>
   );
 }
@@ -300,33 +310,19 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
         return <PnlBySetupWidget stats={data.setupStats} />;
       case "last-7-days":
         return <Last7DaysWidget days={data.last7Days} />;
+      case "win-loss-donut":
+        return (
+          <WinLossDonutWidget
+            wins={data.metrics.winningTrades}
+            losses={data.metrics.losingTrades}
+          />
+        );
       default:
         return null;
     }
   }
 
-  // ── Grid style helper ─────────────────────────────────────────
-
-  function getEditGridStyle(widgetId: string): React.CSSProperties | undefined {
-    const def = getWidgetDefinition(widgetId);
-    if (!def) return undefined;
-    if (def.size === "wide")
-      return { gridColumn: "1 / -1", gridRow: "span 2" };
-    if (def.size === "chart")
-      return { gridColumn: "span 2", gridRow: "span 4" };
-    if (def.size === "list")
-      return { gridRow: "span 3" };
-    // stat: span 1 (default)
-    return undefined;
-  }
-
-  function getViewGridStyle(widgetId: string): React.CSSProperties | undefined {
-    const def = getWidgetDefinition(widgetId);
-    if (!def) return undefined;
-    if (def.size === "wide") return { gridColumn: "1 / -1" };
-    if (def.size === "chart") return { gridColumn: "span 2" };
-    return undefined;
-  }
+  // ── Grid style helper (view mode only) ─────────────────────────
 
   // ── Render ────────────────────────────────────────────────────
 
@@ -387,7 +383,7 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
         )}
       </div>
 
-      {/* ── Edit mode: single sortable grid ── */}
+      {/* ── Edit mode: simple sortable vertical list ── */}
       {editMode ? (
         <DndContext
           sensors={sensors}
@@ -397,25 +393,15 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
         >
           <SortableContext
             items={enabledWidgets.map((w) => w.id)}
-            strategy={rectSortingStrategy}
+            strategy={verticalListSortingStrategy}
           >
-            <div
-              className="grid gap-4"
-              style={{
-                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                gridAutoRows: "80px",
-                gridAutoFlow: "dense",
-              }}
-            >
+            <div className="flex flex-col gap-2">
               {enabledWidgets.map((w) => (
-                <SortableWidgetWrapper
+                <SortableEditRow
                   key={w.id}
                   id={w.id}
                   onRemove={() => removeWidget(w.id)}
-                  gridStyle={getEditGridStyle(w.id)}
-                >
-                  {renderWidgetContent(w.id)}
-                </SortableWidgetWrapper>
+                />
               ))}
             </div>
           </SortableContext>
@@ -423,8 +409,11 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
           {/* Drag overlay for visual feedback */}
           <DragOverlay>
             {activeId ? (
-              <div className="rounded-md border border-primary/30 bg-card opacity-90 shadow-lg">
-                {renderWidgetContent(activeId)}
+              <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-card px-3 py-2.5 opacity-90 shadow-lg">
+                <GripVertical className="h-4 w-4 text-muted-foreground/60" />
+                <span className="text-sm font-medium">
+                  {getWidgetDefinition(activeId)?.name ?? activeId}
+                </span>
               </div>
             ) : null}
           </DragOverlay>

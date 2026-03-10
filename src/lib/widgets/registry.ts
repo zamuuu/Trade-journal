@@ -55,6 +55,12 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: "Net P&L for each of the last 7 calendar days",
     size: "wide",
   },
+  {
+    id: "win-loss-donut",
+    name: "Winning vs Losing Trades",
+    description: "Donut chart showing winning vs losing trade ratio",
+    size: "list",
+  },
 ];
 
 // Default config: the 4 widgets the user selected

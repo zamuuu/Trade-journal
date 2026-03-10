@@ -40,11 +40,13 @@ function MiniMonth({
   monthIndex,
   dayData,
   onOpen,
+  onDayClick,
 }: {
   year: number;
   monthIndex: number; // 0-11
   dayData: Record<string, DayData>;
   onOpen: () => void;
+  onDayClick: (dateKey: string) => void;
 }) {
   const date = new Date(year, monthIndex, 1);
   const monthStart = startOfMonth(date);
@@ -105,9 +107,12 @@ function MiniMonth({
               else if (data.pnl < 0) bgClass = "bg-loss/20";
             }
 
+            const hasData = inMonth && data && data.tradeCount > 0;
+
             return (
               <div
                 key={di}
+                onClick={hasData ? () => onDayClick(dayKey) : undefined}
                 className={`flex h-8 items-center justify-center text-[13px] ${bgClass} ${
                   !inMonth
                     ? "text-muted-foreground/25"
@@ -120,7 +125,7 @@ function MiniMonth({
                       ? "font-medium text-loss"
                       : "text-muted-foreground"
                     : "text-muted-foreground/70"
-                }`}
+                } ${hasData ? "cursor-pointer rounded transition-colors hover:ring-1 hover:ring-primary/50" : ""}`}
               >
                 {format(d, "d")}
               </div>
@@ -137,11 +142,13 @@ function YearOverview({
   dayData,
   onNavigateYear,
   onOpenMonth,
+  onDayClick,
 }: {
   year: number;
   dayData: Record<string, DayData>;
   onNavigateYear: (dir: -1 | 1) => void;
   onOpenMonth: (month: number) => void;
+  onDayClick: (dateKey: string) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -180,6 +187,7 @@ function YearOverview({
             monthIndex={i}
             dayData={dayData}
             onOpen={() => onOpenMonth(i + 1)}
+            onDayClick={onDayClick}
           />
         ))}
       </div>
@@ -195,12 +203,14 @@ function ExpandedMonth({
   dayData,
   onBack,
   onNavigateYear,
+  onDayClick,
 }: {
   year: number;
   month: number; // 1-12
   dayData: Record<string, DayData>;
   onBack: () => void;
   onNavigateYear: (dir: -1 | 1) => void;
+  onDayClick: (dateKey: string) => void;
 }) {
   const date = new Date(year, month - 1, 1);
   const monthStart = startOfMonth(date);
@@ -333,12 +343,15 @@ function ExpandedMonth({
               const inMonth = isSameMonth(d, date);
               const today = isToday(d);
 
+              const hasData = inMonth && data && data.tradeCount > 0;
+
               return (
                 <div
                   key={di}
+                  onClick={hasData ? () => onDayClick(dayKey) : undefined}
                   className={`min-h-[6.5rem] border-b-2 border-r-2 border-foreground/15 p-2.5 transition-colors ${
                     !inMonth ? "bg-background/40" : ""
-                  }`}
+                  } ${hasData ? "cursor-pointer hover:bg-accent/50" : ""}`}
                 >
                   <div className="flex items-start justify-between">
                     <span
@@ -437,6 +450,10 @@ export function CalendarView({ year, month, dayData }: CalendarViewProps) {
     router.push(`/calendar?year=${year}`);
   }
 
+  function goToJournalDay(dateKey: string) {
+    router.push(`/journal?date=${dateKey}`);
+  }
+
   if (month !== null) {
     return (
       <ExpandedMonth
@@ -445,6 +462,7 @@ export function CalendarView({ year, month, dayData }: CalendarViewProps) {
         dayData={dayData}
         onBack={backToYear}
         onNavigateYear={navigateYear}
+        onDayClick={goToJournalDay}
       />
     );
   }
@@ -455,6 +473,7 @@ export function CalendarView({ year, month, dayData }: CalendarViewProps) {
       dayData={dayData}
       onNavigateYear={navigateYear}
       onOpenMonth={openMonth}
+      onDayClick={goToJournalDay}
     />
   );
 }

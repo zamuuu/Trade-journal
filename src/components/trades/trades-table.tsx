@@ -20,13 +20,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronLeft,
   ChevronRight,
   ArrowUp,
   ArrowDown,
+  ChevronDown,
+  Trash2,
+  Tag,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
+import {
+  bulkDeleteTrades,
+  bulkAddTagToTrades,
+  getAllTags,
+} from "@/actions/trade-actions";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -49,9 +75,13 @@ interface TradesTableProps {
   trades: Trade[];
   currentPage: number;
   totalPages: number;
+  pageSize: number;
+  totalCount: number;
   filters: { symbol?: string; side?: string; setup?: string };
   setups: string[];
 }
+
+const PAGE_SIZE_OPTIONS = [30, 60, 100, 200];
 
 type SortKey =
   | "date"
@@ -89,6 +119,8 @@ export function TradesTable({
   trades,
   currentPage,
   totalPages,
+  pageSize,
+  totalCount,
   filters,
   setups,
 }: TradesTableProps) {
@@ -97,6 +129,23 @@ export function TradesTable({
   const [symbolFilter, setSymbolFilter] = useState(filters.symbol ?? "");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // ── Selection state ─────────────────────────────────────────
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // ── Bulk action state ───────────────────────────────────────
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [existingTags, setExistingTags] = useState<{ id: string; name: string }[]>([]);
+  const [isPending, startTransition] = useTransition();
+
+  // Fetch existing tags when tag popover opens
+  useEffect(() => {
+    if (tagPopoverOpen) {
+      getAllTags().then((tags) => setExistingTags(tags));
+    }
+  }, [tagPopoverOpen]);
 
   // ── Sorting ─────────────────────────────────────────────────
 
@@ -150,6 +199,58 @@ export function TradesTable({
   const totalVolume = trades.reduce((sum, t) => sum + t.totalQuantity, 0);
   const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
 
+  // ── Selection helpers ───────────────────────────────────────
+
+  const allVisibleSelected =
+    sortedTrades.length > 0 &&
+    sortedTrades.every((t) => selected.has(t.id));
+
+  function toggleSelectAll(checked: boolean) {
+    if (checked) {
+      const next = new Set(selected);
+      sortedTrades.forEach((t) => next.add(t.id));
+      setSelected(next);
+    } else {
+      const next = new Set(selected);
+      sortedTrades.forEach((t) => next.delete(t.id));
+      setSelected(next);
+    }
+  }
+
+  function toggleSelectOne(tradeId: string, checked: boolean) {
+    const next = new Set(selected);
+    if (checked) {
+      next.add(tradeId);
+    } else {
+      next.delete(tradeId);
+    }
+    setSelected(next);
+  }
+
+  // ── Bulk actions ────────────────────────────────────────────
+
+  function handleBulkDelete() {
+    const ids = Array.from(selected);
+    startTransition(async () => {
+      await bulkDeleteTrades(ids);
+      setSelected(new Set());
+      setDeleteDialogOpen(false);
+      router.refresh();
+    });
+  }
+
+  function handleBulkAddTag() {
+    if (!tagInput.trim()) return;
+    const ids = Array.from(selected);
+    startTransition(async () => {
+      await bulkAddTagToTrades(ids, tagInput.trim());
+      setSelected(new Set());
+      setTagPopoverOpen(false);
+      setTagInput("");
+      router.refresh();
+    });
+  }
+
   // ── Filters ─────────────────────────────────────────────────
 
   function updateFilter(key: string, value: string) {
@@ -160,13 +261,24 @@ export function TradesTable({
       params.delete(key);
     }
     params.set("page", "1");
-    router.push(`/trades?${params.toString()}`);
+    router.push("/trades?" + params.toString());
   }
 
   function goToPage(page: number) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", page.toString());
-    router.push(`/trades?${params.toString()}`);
+    router.push("/trades?" + params.toString());
+  }
+
+  function changePageSize(size: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (size === "30") {
+      params.delete("pageSize");
+    } else {
+      params.set("pageSize", size);
+    }
+    params.set("page", "1");
+    router.push("/trades?" + params.toString());
   }
 
   // ── Header button helper ────────────────────────────────────
@@ -182,9 +294,10 @@ export function TradesTable({
   }) {
     return (
       <TableHead
-        className={`cursor-pointer select-none px-5 py-4 text-[13px] font-semibold tracking-wide text-muted-foreground transition-colors hover:text-foreground ${
-          align === "right" ? "text-right" : "text-left"
-        }`}
+        className={
+          "cursor-pointer select-none px-5 py-4 text-[13px] font-semibold tracking-wide text-muted-foreground transition-colors hover:text-foreground " +
+          (align === "right" ? "text-right" : "text-left")
+        }
         onClick={() => toggleSort(column)}
       >
         {label}
@@ -195,10 +308,12 @@ export function TradesTable({
 
   // ── Render ──────────────────────────────────────────────────
 
+  const selectedCount = selected.size;
+
   return (
     <div className="space-y-5">
       {/* Filters */}
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <Input
           placeholder="Symbol..."
           value={symbolFilter}
@@ -240,13 +355,151 @@ export function TradesTable({
             </SelectContent>
           </Select>
         )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Page size selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] text-muted-foreground">Show</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(v) => changePageSize(v ?? "30")}
+          >
+            <SelectTrigger className="h-9 w-[80px] border-border bg-card text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-[13px] text-muted-foreground">trades</span>
+        </div>
       </div>
+
+      {/* Selection action bar */}
+      {selectedCount > 0 && (
+        <div className="flex items-center gap-3 rounded-md bg-muted/50 px-4 py-2.5">
+          <span className="text-sm text-foreground">
+            {selectedCount} trade{selectedCount !== 1 ? "s" : ""} selected
+          </span>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              Select action
+              <ChevronDown className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setTagPopoverOpen(true)}>
+                <Tag className="mr-2 h-4 w-4" />
+                Add Tag
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Trades
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Add Tag Popover */}
+          <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+            <PopoverTrigger className="hidden" />
+            <PopoverContent align="start" className="w-72 p-4">
+              <div className="space-y-3">
+                <p className="text-sm font-medium">
+                  Add tag to {selectedCount} trade{selectedCount !== 1 ? "s" : ""}
+                </p>
+                <Input
+                  placeholder="Tag name..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleBulkAddTag();
+                    }
+                  }}
+                  className="h-9 text-sm"
+                />
+                {existingTags.length > 0 && (
+                  <div className="max-h-32 space-y-1 overflow-y-auto">
+                    <p className="text-xs text-muted-foreground">Existing tags:</p>
+                    {existingTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        className="block w-full rounded px-2 py-1 text-left text-sm text-foreground transition-colors hover:bg-muted"
+                        onClick={() => setTagInput(tag.name)}
+                      >
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={!tagInput.trim() || isPending}
+                  onClick={handleBulkAddTag}
+                >
+                  {isPending ? "Adding..." : "Submit"}
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete {selectedCount} trade{selectedCount !== 1 ? "s" : ""}?
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete the selected trades and all their
+              executions, tags, and screenshots.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={handleBulkDelete}
+            >
+              {isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Table */}
       <div className="overflow-hidden rounded-md border border-border">
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border bg-popover hover:bg-popover">
+              <TableHead className="w-[40px] px-3 py-4">
+                <Checkbox
+                  checked={allVisibleSelected}
+                  onCheckedChange={(checked) =>
+                    toggleSelectAll(checked as boolean)
+                  }
+                />
+              </TableHead>
               <SortableHead column="date" label="Date" />
               <SortableHead column="symbol" label="Symbol" />
               <SortableHead column="side" label="Side" />
@@ -264,68 +517,89 @@ export function TradesTable({
             {sortedTrades.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className="h-24 text-center text-sm text-muted-foreground"
                 >
                   No trades found.
                 </TableCell>
               </TableRow>
             ) : (
-              sortedTrades.map((trade) => (
-                <TableRow
-                  key={trade.id}
-                  className="cursor-pointer border-b border-border/40 bg-card transition-colors hover:bg-muted/40"
-                  onClick={() => router.push(`/trades/${trade.id}`)}
-                >
-                  <TableCell className="px-5 py-4 font-mono text-[13px] tabular-nums text-muted-foreground">
-                    {format(new Date(trade.entryDate), "dd MMM yyyy")}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-[13px] font-semibold">
-                    {trade.symbol}
-                  </TableCell>
-                  <TableCell className="px-5 py-4">
-                    <span
-                      className={`text-[13px] font-semibold ${trade.side === "LONG" ? "text-profit" : "text-loss"}`}
-                    >
-                      {trade.side}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
-                    {trade.totalQuantity.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
-                    ${trade.avgEntryPrice.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
-                    {trade.avgExitPrice
-                      ? `$${trade.avgExitPrice.toFixed(2)}`
-                      : "--"}
-                  </TableCell>
-                  <TableCell
-                    className={`px-5 py-4 text-right font-mono text-[13px] font-semibold tabular-nums ${
-                      trade.pnl > 0
-                        ? "text-profit"
-                        : trade.pnl < 0
-                          ? "text-loss"
-                          : "text-flat"
-                    }`}
+              sortedTrades.map((trade) => {
+                const isSelected = selected.has(trade.id);
+                return (
+                  <TableRow
+                    key={trade.id}
+                    className={
+                      "cursor-pointer border-b border-border/40 transition-colors hover:bg-muted/40 " +
+                      (isSelected ? "bg-primary/5" : "bg-card")
+                    }
+                    onClick={() => router.push("/trades/" + trade.id)}
                   >
-                    ${trade.pnl < 0 ? "-" : ""}
-                    {Math.abs(trade.pnl).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-[13px] text-muted-foreground">
-                    {trade.setup ?? ""}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-[13px] text-muted-foreground">
-                    {trade.tags.map((t) => t.name).join(", ")}
-                  </TableCell>
-                </TableRow>
-              ))
+                    <TableCell
+                      className="w-[40px] px-3 py-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) =>
+                          toggleSelectOne(trade.id, checked as boolean)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className="px-5 py-4 font-mono text-[13px] tabular-nums text-muted-foreground">
+                      {format(new Date(trade.entryDate), "dd MMM yyyy")}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-[13px] font-semibold">
+                      {trade.symbol}
+                    </TableCell>
+                    <TableCell className="px-5 py-4">
+                      <span
+                        className={
+                          "text-[13px] font-semibold " +
+                          (trade.side === "LONG" ? "text-profit" : "text-loss")
+                        }
+                      >
+                        {trade.side}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
+                      {trade.totalQuantity.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
+                      {"$"}{trade.avgEntryPrice.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
+                      {trade.avgExitPrice
+                        ? <>{"$"}{trade.avgExitPrice.toFixed(2)}</>
+                        : "--"}
+                    </TableCell>
+                    <TableCell
+                      className={
+                        "px-5 py-4 text-right font-mono text-[13px] font-semibold tabular-nums " +
+                        (trade.pnl > 0
+                          ? "text-profit"
+                          : trade.pnl < 0
+                            ? "text-loss"
+                            : "text-flat")
+                      }
+                    >
+                      {trade.pnl < 0 ? "-" : ""}{"$"}{Math.abs(trade.pnl).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-[13px] text-muted-foreground">
+                      {trade.setup ?? ""}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-[13px] text-muted-foreground">
+                      {trade.tags.map((t) => t.name).join(", ")}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
           {sortedTrades.length > 0 && (
             <TableFooter>
               <TableRow className="border-t border-border bg-popover hover:bg-popover">
+                <TableCell className="w-[40px] px-3 py-3.5" />
                 <TableCell className="px-5 py-3.5 text-[13px] font-semibold tracking-wide text-muted-foreground">
                   TOTAL:
                 </TableCell>
@@ -339,15 +613,16 @@ export function TradesTable({
                 <TableCell />
                 <TableCell />
                 <TableCell
-                  className={`px-5 py-3.5 text-right font-mono text-[13px] font-semibold tabular-nums ${
-                    totalPnl > 0
+                  className={
+                    "px-5 py-3.5 text-right font-mono text-[13px] font-semibold tabular-nums " +
+                    (totalPnl > 0
                       ? "text-profit"
                       : totalPnl < 0
                         ? "text-loss"
-                        : "text-flat"
-                  }`}
+                        : "text-flat")
+                  }
                 >
-                  ${totalPnl < 0 ? "-" : ""}{Math.abs(totalPnl).toFixed(2)}
+                  {totalPnl < 0 ? "-" : ""}{"$"}{Math.abs(totalPnl).toFixed(2)}
                 </TableCell>
                 <TableCell />
                 <TableCell />
@@ -359,28 +634,33 @@ export function TradesTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage <= 1}
-            onClick={() => goToPage(currentPage - 1)}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center justify-between">
           <span className="text-[13px] text-muted-foreground">
-            {currentPage} / {totalPages}
+            {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalCount)} of {totalCount}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= totalPages}
-            onClick={() => goToPage(currentPage + 1)}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => goToPage(currentPage - 1)}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-[13px] text-muted-foreground">
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => goToPage(currentPage + 1)}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

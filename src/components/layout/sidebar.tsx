@@ -8,6 +8,7 @@ import {
   List,
   CalendarDays,
   BarChart3,
+  BookOpen,
   Upload,
   ChevronsLeft,
   ChevronsRight,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/trades", label: "Trades", icon: List },
+  { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/import", label: "Import", icon: Upload },
