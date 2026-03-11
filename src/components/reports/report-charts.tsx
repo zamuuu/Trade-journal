@@ -21,7 +21,6 @@ interface ReportChartsProps {
   dailyPnl: { date: string; pnl: number }[];
   drawdownData: { date: string; drawdown: number }[];
   winLossDays: { winDays: number; lossDays: number; breakEvenDays: number };
-  pnlBySymbol: { symbol: string; pnl: number; count: number }[];
 }
 
 const tooltipStyle = {
@@ -41,7 +40,6 @@ export function ReportCharts({
   dailyPnl,
   drawdownData,
   winLossDays,
-  pnlBySymbol,
 }: ReportChartsProps) {
   if (cumulativePnl.length === 0) {
     return (
@@ -122,27 +120,6 @@ export function ReportCharts({
         </ResponsiveContainer>
       </div>
 
-      {/* PnL by Symbol */}
-      {pnlBySymbol.length > 0 && (
-        <div className="rounded-md border border-border bg-card p-4">
-          <p className="mb-3 text-[13px] font-medium uppercase tracking-wider text-muted-foreground">PnL by Symbol</p>
-          <ResponsiveContainer width="100%" height={Math.max(160, pnlBySymbol.length * 36)}>
-            <BarChart data={pnlBySymbol} layout="vertical">
-              <XAxis type="number" stroke={MUTED} fontSize={12} tickFormatter={(val) => `$${val}`} tickLine={false} axisLine={false} />
-              <YAxis type="category" dataKey="symbol" stroke={MUTED} fontSize={12} width={50} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={tooltipStyle}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                formatter={(value: any, _name: any, props: any) => [`$${Number(value).toFixed(2)} (${props?.payload?.count ?? 0} trades)`, "PnL"]} />
-              <ReferenceLine x={0} stroke={BORDER} strokeDasharray="3 3" />
-              <Bar dataKey="pnl" radius={[0, 2, 2, 0]}>
-                {pnlBySymbol.map((entry, index) => (
-                  <Cell key={index} fill={entry.pnl >= 0 ? GREEN : RED} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
     </div>
   );
 }

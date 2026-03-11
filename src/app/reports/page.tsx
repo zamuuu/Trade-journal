@@ -58,28 +58,12 @@ export default async function ReportsPage() {
     };
   });
 
-  // PnL by symbol
-  const symbolMap: Record<string, { pnl: number; count: number }> = {};
-  for (const t of trades) {
-    if (!symbolMap[t.symbol]) symbolMap[t.symbol] = { pnl: 0, count: 0 };
-    symbolMap[t.symbol].pnl += t.pnl;
-    symbolMap[t.symbol].count++;
-  }
-  const pnlBySymbol = Object.entries(symbolMap)
-    .map(([symbol, data]) => ({
-      symbol,
-      pnl: Math.round(data.pnl * 100) / 100,
-      count: data.count,
-    }))
-    .sort((a, b) => b.pnl - a.pnl);
-
   return (
     <ReportCharts
       cumulativePnl={cumulativePnl}
       dailyPnl={dailyPnl}
       drawdownData={drawdownData}
       winLossDays={{ winDays, lossDays, breakEvenDays }}
-      pnlBySymbol={pnlBySymbol}
     />
   );
 }

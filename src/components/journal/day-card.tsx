@@ -302,7 +302,8 @@ export function DayCard({ day, allTags, noteTemplates }: DayCardProps) {
             )}
           </button>
           {tradesExpanded && (
-            <Table>
+            <Table className="table-fixed">
+              <colgroup><col className="w-[12%]" /><col className="w-[12%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[8%]" /><col className="w-[12%]" /><col className="w-[18%]" /><col className="w-[18%]" /></colgroup>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="pl-6 text-xs">Time</TableHead>
@@ -311,6 +312,7 @@ export function DayCard({ day, allTags, noteTemplates }: DayCardProps) {
                   <TableHead className="text-xs text-right">Volume</TableHead>
                   <TableHead className="text-xs text-right">Execs</TableHead>
                   <TableHead className="text-xs text-right">P&amp;L</TableHead>
+                  <TableHead className="text-xs">Setup</TableHead>
                   <TableHead className="pr-6 text-xs">Tags</TableHead>
                 </TableRow>
               </TableHeader>
@@ -353,13 +355,16 @@ export function DayCard({ day, allTags, noteTemplates }: DayCardProps) {
                       <TableCell className="text-xs text-right font-tabular">
                         {trade.executionCount}
                       </TableCell>
-                      <TableCell
+                       <TableCell
                         className={cn(
                           "text-xs text-right font-semibold font-tabular",
                           tradePnlColor
                         )}
                       >
                         {tradePnlPrefix}${Math.abs(trade.pnl).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {trade.setup ?? ""}
                       </TableCell>
                       <TableCell className="pr-6">
                         <div className="flex gap-1 flex-wrap">

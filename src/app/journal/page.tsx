@@ -72,6 +72,7 @@ export default async function JournalPage({
       pnl: trade.pnl,
       totalQuantity: trade.totalQuantity,
       executionCount: trade.executions.length,
+      setup: trade.setup,
       tags: trade.tags.map((tt) => ({ id: tt.tag.id, name: tt.tag.name })),
     });
   }

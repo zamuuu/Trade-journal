@@ -14,20 +14,8 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
 
   // Calculate arcs — win portion starts at top (12 o'clock)
   const winRatio = total > 0 ? wins / total : 0;
-  const lossRatio = total > 0 ? losses / total : 0;
   const winLength = circumference * winRatio;
-  const lossLength = circumference * lossRatio;
-
-  // Gap between segments (only if both exist)
-  const hasGap = wins > 0 && losses > 0;
-  const gapLength = hasGap ? 6 : 0;
-  const adjustedWinLength = Math.max(0, winLength - gapLength);
-  const adjustedLossLength = Math.max(0, lossLength - gapLength);
-
-  // Win arc: starts at top (offset 0), goes clockwise
-  const winOffset = gapLength / 2;
-  // Loss arc: starts right after win arc + gap, going clockwise
-  const lossOffset = -(winLength + gapLength / 2);
+  const lossLength = circumference - winLength;
 
   return (
     <div className="rounded-md border border-border bg-card px-4 py-3">
@@ -59,7 +47,7 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
               viewBox={`0 0 ${size} ${size}`}
               className="rotate-[-90deg]"
             >
-              {/* Loss arc (red) — drawn first so win arc renders on top */}
+              {/* Loss arc (red) — full circle background */}
               {losses > 0 && (
                 <circle
                   cx={size / 2}
@@ -68,13 +56,12 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
                   fill="none"
                   className="stroke-loss"
                   strokeWidth={strokeWidth}
-                  strokeDasharray={`${adjustedLossLength} ${circumference - adjustedLossLength}`}
-                  strokeDashoffset={lossOffset}
-                  strokeLinecap="round"
+                  strokeDasharray={`${lossLength} ${circumference - lossLength}`}
+                  strokeDashoffset={-winLength}
                 />
               )}
 
-              {/* Win arc (green) — drawn second so it renders on top */}
+              {/* Win arc (green) — starts at top, drawn on top */}
               {wins > 0 && (
                 <circle
                   cx={size / 2}
@@ -83,9 +70,7 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
                   fill="none"
                   className="stroke-profit"
                   strokeWidth={strokeWidth}
-                  strokeDasharray={`${adjustedWinLength} ${circumference - adjustedWinLength}`}
-                  strokeDashoffset={winOffset}
-                  strokeLinecap="round"
+                  strokeDasharray={`${winLength} ${circumference - winLength}`}
                 />
               )}
             </svg>

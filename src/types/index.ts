@@ -181,6 +181,7 @@ export interface JournalDayTrade {
   pnl: number;
   totalQuantity: number;
   executionCount: number;
+  setup: string | null;
   tags: { id: string; name: string }[];
 }
 
