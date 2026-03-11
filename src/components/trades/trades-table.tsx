@@ -80,8 +80,9 @@ interface TradesTableProps {
   totalPages: number;
   pageSize: number;
   totalCount: number;
-  filters: { symbol?: string; side?: string; setup?: string };
+  filters: { symbol?: string; side?: string; setup?: string; tag?: string };
   setups: string[];
+  allTags: { id: string; name: string }[];
 }
 
 const PAGE_SIZE_OPTIONS = [30, 60, 100, 200];
@@ -126,6 +127,7 @@ export function TradesTable({
   totalCount,
   filters,
   setups,
+  allTags,
 }: TradesTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -389,6 +391,24 @@ export function TradesTable({
               {setups.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {allTags.length > 0 && (
+          <Select
+            value={filters.tag ?? "all"}
+            onValueChange={(v) => updateFilter("tag", v ?? "")}
+          >
+            <SelectTrigger className="h-9 w-40 border-border bg-card text-sm">
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All tags</SelectItem>
+              {allTags.map((t) => (
+                <SelectItem key={t.id} value={t.name}>
+                  {t.name}
                 </SelectItem>
               ))}
             </SelectContent>

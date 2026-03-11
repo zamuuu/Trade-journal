@@ -7,6 +7,7 @@ interface SearchParams {
   symbol?: string;
   side?: string;
   setup?: string;
+  tag?: string;
   page?: string;
   pageSize?: string;
 }
@@ -29,6 +30,7 @@ export default async function TradesPage({
   if (params.symbol) where.symbol = { contains: params.symbol.toUpperCase() };
   if (params.side) where.side = params.side;
   if (params.setup) where.setup = params.setup;
+  if (params.tag) where.tags = { some: { tag: { name: params.tag } } };
 
   const [trades, totalCount] = await Promise.all([
     prisma.trade.findMany({
@@ -45,12 +47,15 @@ export default async function TradesPage({
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  // Get unique setups for filter
-  const setups = await prisma.trade.findMany({
-    where: { setup: { not: null } },
-    select: { setup: true },
-    distinct: ["setup"],
-  });
+  // Get unique setups and all tags for filters
+  const [setups, allTags] = await Promise.all([
+    prisma.trade.findMany({
+      where: { setup: { not: null } },
+      select: { setup: true },
+      distinct: ["setup"],
+    }),
+    prisma.tag.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -73,6 +78,7 @@ export default async function TradesPage({
         setups={setups
           .map((s) => s.setup)
           .filter((s): s is string => s !== null)}
+        allTags={allTags}
       />
     </div>
   );
