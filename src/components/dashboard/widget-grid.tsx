@@ -320,6 +320,22 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
         );
       case "pnl-by-day":
         return <PnlByDayWidget days={data.dayOfWeekPnl} />;
+      case "max-consec-wins":
+        return (
+          <StatWidget
+            label="Max Consecutive Wins"
+            value={data.metrics.maxConsecutiveWins.toString()}
+            colorClass="text-profit"
+          />
+        );
+      case "max-consec-losses":
+        return (
+          <StatWidget
+            label="Max Consecutive Losses"
+            value={data.metrics.maxConsecutiveLosses.toString()}
+            colorClass="text-loss"
+          />
+        );
       default:
         return null;
     }

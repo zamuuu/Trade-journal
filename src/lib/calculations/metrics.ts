@@ -20,6 +20,8 @@ export function calculateMetrics(trades: TradeForMetrics[]): DashboardMetrics {
       winningTrades: 0,
       losingTrades: 0,
       breakEvenTrades: 0,
+      maxConsecutiveWins: 0,
+      maxConsecutiveLosses: 0,
     };
   }
 
@@ -36,6 +38,26 @@ export function calculateMetrics(trades: TradeForMetrics[]): DashboardMetrics {
   const averageLoss = losers.length > 0 ? totalLosses / losers.length : 0;
   const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
 
+  // Max consecutive wins / losses
+  let maxConsecWins = 0;
+  let maxConsecLosses = 0;
+  let currentWins = 0;
+  let currentLosses = 0;
+  for (const t of closedTrades) {
+    if (t.pnl > 0) {
+      currentWins++;
+      currentLosses = 0;
+      if (currentWins > maxConsecWins) maxConsecWins = currentWins;
+    } else if (t.pnl < 0) {
+      currentLosses++;
+      currentWins = 0;
+      if (currentLosses > maxConsecLosses) maxConsecLosses = currentLosses;
+    } else {
+      currentWins = 0;
+      currentLosses = 0;
+    }
+  }
+
   return {
     totalTrades,
     winRate: Math.round(winRate * 100) / 100,
@@ -46,5 +68,7 @@ export function calculateMetrics(trades: TradeForMetrics[]): DashboardMetrics {
     winningTrades: winners.length,
     losingTrades: losers.length,
     breakEvenTrades: breakEven.length,
+    maxConsecutiveWins: maxConsecWins,
+    maxConsecutiveLosses: maxConsecLosses,
   };
 }

@@ -55,6 +55,8 @@ export interface DashboardMetrics {
   winningTrades: number;
   losingTrades: number;
   breakEvenTrades: number;
+  maxConsecutiveWins: number;
+  maxConsecutiveLosses: number;
 }
 
 // Widget system

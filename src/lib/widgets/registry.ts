@@ -67,6 +67,18 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: "P&L breakdown by day of week with percentage bars",
     size: "list",
   },
+  {
+    id: "max-consec-wins",
+    name: "Max Consecutive Wins",
+    description: "Highest streak of consecutive winning trades",
+    size: "stat",
+  },
+  {
+    id: "max-consec-losses",
+    name: "Max Consecutive Losses",
+    description: "Highest streak of consecutive losing trades",
+    size: "stat",
+  },
 ];
 
 // Default config: the 4 widgets the user selected
