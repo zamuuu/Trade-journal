@@ -20,14 +20,14 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
 
   // Gap between segments (only if both exist)
   const hasGap = wins > 0 && losses > 0;
-  const gapLength = hasGap ? 4 : 0;
-  const adjustedWinLength = Math.max(0, winLength - gapLength / 2);
-  const adjustedLossLength = Math.max(0, lossLength - gapLength / 2);
+  const gapLength = hasGap ? 6 : 0;
+  const adjustedWinLength = Math.max(0, winLength - gapLength);
+  const adjustedLossLength = Math.max(0, lossLength - gapLength);
 
-  // Win arc: starts at top, goes clockwise
-  const winOffset = 0;
-  // Loss arc: starts right after win arc + gap
-  const lossOffset = circumference - winLength - gapLength / 2;
+  // Win arc: starts at top (offset 0), goes clockwise
+  const winOffset = gapLength / 2;
+  // Loss arc: starts right after win arc + gap, going clockwise
+  const lossOffset = -(winLength + gapLength / 2);
 
   return (
     <div className="rounded-md border border-border bg-card px-4 py-3">
@@ -59,22 +59,7 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
               viewBox={`0 0 ${size} ${size}`}
               className="rotate-[-90deg]"
             >
-              {/* Win arc (green) */}
-              {wins > 0 && (
-                <circle
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  fill="none"
-                  className="stroke-profit"
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${adjustedWinLength} ${circumference - adjustedWinLength}`}
-                  strokeDashoffset={-winOffset}
-                  strokeLinecap="round"
-                />
-              )}
-
-              {/* Loss arc (red) */}
+              {/* Loss arc (red) — drawn first so win arc renders on top */}
               {losses > 0 && (
                 <circle
                   cx={size / 2}
@@ -84,7 +69,22 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
                   className="stroke-loss"
                   strokeWidth={strokeWidth}
                   strokeDasharray={`${adjustedLossLength} ${circumference - adjustedLossLength}`}
-                  strokeDashoffset={-lossOffset}
+                  strokeDashoffset={lossOffset}
+                  strokeLinecap="round"
+                />
+              )}
+
+              {/* Win arc (green) — drawn second so it renders on top */}
+              {wins > 0 && (
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  className="stroke-profit"
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={`${adjustedWinLength} ${circumference - adjustedWinLength}`}
+                  strokeDashoffset={winOffset}
                   strokeLinecap="round"
                 />
               )}

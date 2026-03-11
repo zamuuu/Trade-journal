@@ -23,8 +23,8 @@ export async function saveDayNotes(date: string, notes: string) {
 }
 
 export async function addTagToDay(date: string, tagName: string) {
-  const normalizedName = tagName.trim().toLowerCase();
-  if (!normalizedName) return;
+  const trimmedName = tagName.trim();
+  if (!trimmedName) return;
 
   // Ensure DayNote exists
   let dayNote = await prisma.dayNote.findUnique({ where: { date } });
@@ -34,14 +34,15 @@ export async function addTagToDay(date: string, tagName: string) {
     });
   }
 
-  // Find or create tag
-  let tag = await prisma.tag.findUnique({
-    where: { name: normalizedName },
-  });
+  // Find or create tag (case-insensitive lookup, preserve original casing)
+  const allTags = await prisma.tag.findMany();
+  let tag = allTags.find(
+    (t) => t.name.toLowerCase() === trimmedName.toLowerCase()
+  ) ?? null;
 
   if (!tag) {
     tag = await prisma.tag.create({
-      data: { name: normalizedName },
+      data: { name: trimmedName },
     });
   }
 

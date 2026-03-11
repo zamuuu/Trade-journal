@@ -39,17 +39,18 @@ export async function bulkDeleteTrades(tradeIds: string[]) {
  * Skips trades that already have the tag.
  */
 export async function bulkAddTagToTrades(tradeIds: string[], tagName: string) {
-  const normalizedName = tagName.trim().toLowerCase();
-  if (!normalizedName || tradeIds.length === 0) return;
+  const trimmedName = tagName.trim();
+  if (!trimmedName || tradeIds.length === 0) return;
 
-  // Find or create tag
-  let tag = await prisma.tag.findUnique({
-    where: { name: normalizedName },
-  });
+  // Find or create tag (case-insensitive lookup, preserve original casing)
+  const allTags = await prisma.tag.findMany();
+  let tag = allTags.find(
+    (t) => t.name.toLowerCase() === trimmedName.toLowerCase()
+  ) ?? null;
 
   if (!tag) {
     tag = await prisma.tag.create({
-      data: { name: normalizedName },
+      data: { name: trimmedName },
     });
   }
 
@@ -168,16 +169,18 @@ export async function updateTradeSetup(tradeId: string, setup: string) {
  * Add a tag to a single trade. Creates the tag if it doesn't exist.
  */
 export async function addTagToTrade(tradeId: string, tagName: string) {
-  const normalizedName = tagName.trim().toLowerCase();
-  if (!normalizedName) return;
+  const trimmedName = tagName.trim();
+  if (!trimmedName) return;
 
-  let tag = await prisma.tag.findUnique({
-    where: { name: normalizedName },
-  });
+  // Find or create tag (case-insensitive lookup, preserve original casing)
+  const allTags = await prisma.tag.findMany();
+  let tag = allTags.find(
+    (t) => t.name.toLowerCase() === trimmedName.toLowerCase()
+  ) ?? null;
 
   if (!tag) {
     tag = await prisma.tag.create({
-      data: { name: normalizedName },
+      data: { name: trimmedName },
     });
   }
 
