@@ -61,6 +61,12 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: "Donut chart showing winning vs losing trade ratio",
     size: "list",
   },
+  {
+    id: "pnl-by-day",
+    name: "Performance By Day Of Week",
+    description: "P&L breakdown by day of week with percentage bars",
+    size: "list",
+  },
 ];
 
 // Default config: the 4 widgets the user selected

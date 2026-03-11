@@ -90,6 +90,15 @@ export interface DailyPnl {
   tradeCount: number;
 }
 
+// P&L aggregated by day of week (0=Sun, 6=Sat)
+export interface DayOfWeekPnl {
+  day: number; // 0=Sun, 1=Mon, ... 6=Sat
+  label: string; // "Sun", "Mon", etc.
+  pnl: number;
+  percent: number; // % of total absolute P&L
+  tradeCount: number;
+}
+
 // All possible data the dashboard can pass to widgets
 export interface DashboardData {
   metrics: DashboardMetrics;
@@ -104,6 +113,7 @@ export interface DashboardData {
   }[];
   setupStats: SetupStats[];
   last7Days: DailyPnl[];
+  dayOfWeekPnl: DayOfWeekPnl[];
 }
 
 // Detailed reports stats (all 24 metrics for the Detailed tab)

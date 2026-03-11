@@ -46,12 +46,15 @@ import {
   ChevronDown,
   Trash2,
   Tag,
+  Tags,
 } from "lucide-react";
 import { useState, useMemo, useTransition, useEffect } from "react";
 import {
   bulkDeleteTrades,
   bulkAddTagToTrades,
+  bulkRemoveTagFromTrades,
   getAllTags,
+  getTagsForTrades,
 } from "@/actions/trade-actions";
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -138,14 +141,27 @@ export function TradesTable({
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [existingTags, setExistingTags] = useState<{ id: string; name: string }[]>([]);
+  const [removeTagPopoverOpen, setRemoveTagPopoverOpen] = useState(false);
+  const [selectedTradesTags, setSelectedTradesTags] = useState<{ id: string; name: string; count: number }[]>([]);
+  const [tagIdsToRemove, setTagIdsToRemove] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
 
-  // Fetch existing tags when tag popover opens
+  // Fetch existing tags when add-tag popover opens
   useEffect(() => {
     if (tagPopoverOpen) {
       getAllTags().then((tags) => setExistingTags(tags));
     }
   }, [tagPopoverOpen]);
+
+  // Fetch tags for selected trades when remove-tag popover opens
+  useEffect(() => {
+    if (removeTagPopoverOpen && selected.size > 0) {
+      getTagsForTrades(Array.from(selected)).then((tags) => {
+        setSelectedTradesTags(tags);
+        setTagIdsToRemove(new Set());
+      });
+    }
+  }, [removeTagPopoverOpen, selected]);
 
   // ── Sorting ─────────────────────────────────────────────────
 
@@ -249,6 +265,29 @@ export function TradesTable({
       setTagInput("");
       router.refresh();
     });
+  }
+
+  function handleBulkRemoveTags() {
+    if (tagIdsToRemove.size === 0) return;
+    const tradeIds = Array.from(selected);
+    const tagIds = Array.from(tagIdsToRemove);
+    startTransition(async () => {
+      await bulkRemoveTagFromTrades(tradeIds, tagIds);
+      setSelected(new Set());
+      setRemoveTagPopoverOpen(false);
+      setTagIdsToRemove(new Set());
+      router.refresh();
+    });
+  }
+
+  function toggleTagToRemove(tagId: string) {
+    const next = new Set(tagIdsToRemove);
+    if (next.has(tagId)) {
+      next.delete(tagId);
+    } else {
+      next.add(tagId);
+    }
+    setTagIdsToRemove(next);
   }
 
   // ── Filters ─────────────────────────────────────────────────
@@ -400,6 +439,10 @@ export function TradesTable({
                 <Tag className="mr-2 h-4 w-4" />
                 Add Tag
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setRemoveTagPopoverOpen(true)}>
+                <Tags className="mr-2 h-4 w-4" />
+                Remove Tags
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
@@ -453,6 +496,50 @@ export function TradesTable({
                   onClick={handleBulkAddTag}
                 >
                   {isPending ? "Adding..." : "Submit"}
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Remove Tags Popover */}
+          <Popover open={removeTagPopoverOpen} onOpenChange={setRemoveTagPopoverOpen}>
+            <PopoverTrigger className="hidden" />
+            <PopoverContent align="start" className="w-72 p-4">
+              <div className="space-y-3">
+                <p className="text-sm font-medium">
+                  Remove tags from {selectedCount} trade{selectedCount !== 1 ? "s" : ""}
+                </p>
+                {selectedTradesTags.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No tags on selected trades.
+                  </p>
+                ) : (
+                  <div className="max-h-48 space-y-1 overflow-y-auto">
+                    {selectedTradesTags.map((tag) => (
+                      <label
+                        key={tag.id}
+                        className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-1.5 text-sm transition-colors hover:bg-muted"
+                      >
+                        <Checkbox
+                          checked={tagIdsToRemove.has(tag.id)}
+                          onCheckedChange={() => toggleTagToRemove(tag.id)}
+                        />
+                        <span className="flex-1 text-foreground">{tag.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {tag.count}/{selectedCount}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="w-full"
+                  disabled={tagIdsToRemove.size === 0 || isPending}
+                  onClick={handleBulkRemoveTags}
+                >
+                  {isPending ? "Removing..." : "Remove " + tagIdsToRemove.size + " tag" + (tagIdsToRemove.size !== 1 ? "s" : "")}
                 </Button>
               </div>
             </PopoverContent>

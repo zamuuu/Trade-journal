@@ -3,15 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { JournalDay } from "@/types";
 import { DayCard } from "./day-card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -20,9 +12,6 @@ interface JournalViewProps {
   currentPage: number;
   totalPages: number;
   filters: {
-    symbol?: string;
-    side?: string;
-    tag?: string;
     date?: string;
   };
   allTags: { id: string; name: string }[];
@@ -39,17 +28,6 @@ export function JournalView({
 }: JournalViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  function updateFilter(key: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
-    params.delete("page"); // Reset to page 1 on filter change
-    router.push(`/journal?${params.toString()}`);
-  }
 
   function goToPage(page: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -85,56 +63,6 @@ export function JournalView({
           </Button>
         </div>
       )}
-
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder="Symbol"
-          defaultValue={filters.symbol ?? ""}
-          className="w-[160px]"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              updateFilter("symbol", (e.target as HTMLInputElement).value);
-            }
-          }}
-          onBlur={(e) => {
-            if (e.target.value !== (filters.symbol ?? "")) {
-              updateFilter("symbol", e.target.value);
-            }
-          }}
-        />
-
-        <Select
-          value={filters.side ?? "all"}
-          onValueChange={(v) => updateFilter("side", v === "all" ? "" : v ?? "")}
-        >
-          <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="Side" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Sides</SelectItem>
-            <SelectItem value="LONG">Long</SelectItem>
-            <SelectItem value="SHORT">Short</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.tag ?? "all"}
-          onValueChange={(v) => updateFilter("tag", v === "all" ? "" : v ?? "")}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Tags" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Tags</SelectItem>
-            {allTags.map((tag) => (
-              <SelectItem key={tag.id} value={tag.name}>
-                {tag.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Day cards */}
       {days.length === 0 ? (

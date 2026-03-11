@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { calculateMetrics } from "@/lib/calculations/metrics";
 import { getDashboardConfig } from "@/actions/dashboard-actions";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
-import { SetupStats, DailyPnl } from "@/types";
+import { SetupStats, DailyPnl, DayOfWeekPnl } from "@/types";
 
 export default async function DashboardPage() {
   const [trades, recentTrades, widgetConfig] = await Promise.all([
@@ -99,6 +99,25 @@ export default async function DashboardPage() {
     }
   }
 
+  // Aggregate P&L by day of week
+  const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dowBuckets = DAY_LABELS.map((label, i) => ({
+    day: i,
+    label,
+    pnl: 0,
+    tradeCount: 0,
+  }));
+  for (const t of trades) {
+    const dow = new Date(t.entryDate).getDay(); // 0=Sun
+    dowBuckets[dow].pnl = Math.round((dowBuckets[dow].pnl + t.pnl) * 100) / 100;
+    dowBuckets[dow].tradeCount++;
+  }
+  const totalAbsPnl = dowBuckets.reduce((sum, d) => sum + Math.abs(d.pnl), 0);
+  const dayOfWeekPnl: DayOfWeekPnl[] = dowBuckets.map((d) => ({
+    ...d,
+    percent: totalAbsPnl > 0 ? Math.round((Math.abs(d.pnl) / totalAbsPnl) * 10000) / 100 : 0,
+  }));
+
   return (
     <WidgetGrid
       initialConfig={widgetConfig}
@@ -111,6 +130,7 @@ export default async function DashboardPage() {
         })),
         setupStats,
         last7Days,
+        dayOfWeekPnl,
       }}
     />
   );

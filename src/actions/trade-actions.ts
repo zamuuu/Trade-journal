@@ -4,6 +4,18 @@ import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 /**
+ * Delete tags that are not referenced by any TradeTag or DayNoteTag.
+ */
+async function cleanupOrphanedTags() {
+  await prisma.tag.deleteMany({
+    where: {
+      trades: { none: {} },
+      dayNotes: { none: {} },
+    },
+  });
+}
+
+/**
  * Delete multiple trades by their IDs (cascade deletes executions, tags, screenshots).
  */
 export async function bulkDeleteTrades(tradeIds: string[]) {
@@ -12,6 +24,8 @@ export async function bulkDeleteTrades(tradeIds: string[]) {
   await prisma.trade.deleteMany({
     where: { id: { in: tradeIds } },
   });
+
+  await cleanupOrphanedTags();
 
   revalidatePath("/trades");
   revalidatePath("/");
@@ -71,6 +85,57 @@ export async function getAllTags(): Promise<{ id: string; name: string }[]> {
   return prisma.tag.findMany({
     orderBy: { name: "asc" },
   });
+}
+
+/**
+ * Get tags that are currently assigned to any of the given trades.
+ * Returns each tag with the count of how many selected trades have it.
+ */
+export async function getTagsForTrades(
+  tradeIds: string[]
+): Promise<{ id: string; name: string; count: number }[]> {
+  if (tradeIds.length === 0) return [];
+
+  const tradeTags = await prisma.tradeTag.findMany({
+    where: { tradeId: { in: tradeIds } },
+    include: { tag: true },
+  });
+
+  const tagMap = new Map<string, { id: string; name: string; count: number }>();
+  for (const tt of tradeTags) {
+    const existing = tagMap.get(tt.tagId);
+    if (existing) {
+      existing.count++;
+    } else {
+      tagMap.set(tt.tagId, { id: tt.tag.id, name: tt.tag.name, count: 1 });
+    }
+  }
+
+  return Array.from(tagMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+}
+
+/**
+ * Remove specific tags from multiple trades.
+ */
+export async function bulkRemoveTagFromTrades(
+  tradeIds: string[],
+  tagIds: string[]
+) {
+  if (tradeIds.length === 0 || tagIds.length === 0) return;
+
+  await prisma.tradeTag.deleteMany({
+    where: {
+      tradeId: { in: tradeIds },
+      tagId: { in: tagIds },
+    },
+  });
+
+  await cleanupOrphanedTags();
+
+  revalidatePath("/trades");
+  revalidatePath("/journal");
 }
 
 // ── Single-trade actions (used by trade detail page) ────────────
@@ -137,6 +202,9 @@ export async function removeTagFromTrade(tradeId: string, tagId: string) {
   await prisma.tradeTag.delete({
     where: { tradeId_tagId: { tradeId, tagId } },
   });
+
+  await cleanupOrphanedTags();
+
   revalidatePath("/trades/" + tradeId);
   revalidatePath("/trades");
 }
@@ -148,6 +216,9 @@ export async function deleteTrade(tradeId: string) {
   await prisma.trade.delete({
     where: { id: tradeId },
   });
+
+  await cleanupOrphanedTags();
+
   revalidatePath("/trades");
   revalidatePath("/");
   revalidatePath("/journal");

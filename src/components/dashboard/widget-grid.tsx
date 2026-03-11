@@ -40,6 +40,7 @@ import { AvgWinLossWidget } from "./avg-win-loss-widget";
 import { PnlBySetupWidget } from "./pnl-by-setup-widget";
 import { Last7DaysWidget } from "./last-7-days-widget";
 import { WinLossDonutWidget } from "./win-loss-donut-widget";
+import { PnlByDayWidget } from "./pnl-by-day-widget";
 import { WidgetCustomizer } from "./widget-customizer";
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -317,6 +318,8 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
             losses={data.metrics.losingTrades}
           />
         );
+      case "pnl-by-day":
+        return <PnlByDayWidget days={data.dayOfWeekPnl} />;
       default:
         return null;
     }

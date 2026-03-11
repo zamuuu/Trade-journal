@@ -6,9 +6,6 @@ import { JournalDay, JournalDayTrade } from "@/types";
 import { format } from "date-fns";
 
 interface SearchParams {
-  symbol?: string;
-  side?: string;
-  tag?: string;
   page?: string;
   date?: string; // yyyy-MM-dd — used when navigating from Calendar
 }
@@ -22,8 +19,6 @@ export default async function JournalPage({
 
   // Build trade filter
   const where: Record<string, unknown> = { status: "CLOSED" };
-  if (params.symbol) where.symbol = { contains: params.symbol.toUpperCase() };
-  if (params.side) where.side = params.side;
 
   // Single-day filter (from Calendar click)
   if (params.date) {
@@ -119,19 +114,11 @@ export default async function JournalPage({
   // Sort by date descending
   days.sort((a, b) => b.date.localeCompare(a.date));
 
-  // Tag filtering (after grouping, since tags are on day notes)
-  let filteredDays = days;
-  if (params.tag) {
-    filteredDays = days.filter((d) =>
-      d.tags.some((t) => t.name === params.tag)
-    );
-  }
-
   // Pagination
   const page = parseInt(params.page ?? "1", 10);
   const pageSize = 20;
-  const totalPages = Math.ceil(filteredDays.length / pageSize);
-  const paginatedDays = filteredDays.slice(
+  const totalPages = Math.ceil(days.length / pageSize);
+  const paginatedDays = days.slice(
     (page - 1) * pageSize,
     page * pageSize
   );
@@ -151,14 +138,14 @@ export default async function JournalPage({
       <div>
         <h1 className="text-lg font-semibold">Journal</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {filteredDays.length} trading day{filteredDays.length !== 1 ? "s" : ""}
+          {days.length} trading day{days.length !== 1 ? "s" : ""}
         </p>
       </div>
       <JournalView
         days={paginatedDays}
         currentPage={page}
         totalPages={totalPages}
-        filters={params}
+        filters={{ date: params.date }}
         allTags={allTags.map((t) => ({ id: t.id, name: t.name }))}
         noteTemplates={noteTemplates.map((nt) => ({
           id: nt.id,
