@@ -6,6 +6,14 @@ import { decodeFileContent } from "@/lib/csv/encoding";
 import { reconstructTrades } from "@/lib/csv/trade-reconstructor";
 import { ReconstructedTrade } from "@/types";
 
+/** Build parser options from form data (e.g. tradeDate for DAS). */
+function buildParserOptions(formData: FormData): Record<string, string> {
+  const opts: Record<string, string> = {};
+  const tradeDate = formData.get("tradeDate");
+  if (typeof tradeDate === "string" && tradeDate) opts.tradeDate = tradeDate;
+  return opts;
+}
+
 export async function previewImport(formData: FormData) {
   const file = formData.get("file") as File;
   const brokerId = formData.get("broker") as string;
@@ -23,8 +31,9 @@ export async function previewImport(formData: FormData) {
   const buffer = await file.arrayBuffer();
   const content = decodeFileContent(buffer);
 
-  // Parse executions
-  const executions = parser.parse(content);
+  // Parse executions (pass extra options like tradeDate)
+  const options = buildParserOptions(formData);
+  const executions = parser.parse(content, options);
   if (executions.length === 0) {
     return { error: "No valid executions found in the file" };
   }
@@ -62,7 +71,8 @@ export async function confirmImport(formData: FormData) {
 
   const buffer = await file.arrayBuffer();
   const content = decodeFileContent(buffer);
-  const executions = parser.parse(content);
+  const options = buildParserOptions(formData);
+  const executions = parser.parse(content, options);
   const trades = reconstructTrades(executions);
 
   if (trades.length === 0) {

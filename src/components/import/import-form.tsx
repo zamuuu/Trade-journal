@@ -23,6 +23,7 @@ import { ReconstructedTrade } from "@/types";
 
 export function ImportForm() {
   const [broker, setBroker] = useState("sterling");
+  const [tradeDate, setTradeDate] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<{
     trades: ReconstructedTrade[];
@@ -40,6 +41,9 @@ export function ImportForm() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const needsDate = broker === "das";
+  const canPreview = file && (!needsDate || tradeDate);
+
   async function handlePreview() {
     if (!file) return;
     setLoading(true);
@@ -49,6 +53,7 @@ export function ImportForm() {
     const formData = new FormData();
     formData.set("file", file);
     formData.set("broker", broker);
+    if (tradeDate) formData.set("tradeDate", tradeDate);
 
     const res = await previewImport(formData);
     if ("error" in res) {
@@ -66,6 +71,7 @@ export function ImportForm() {
     const formData = new FormData();
     formData.set("file", file);
     formData.set("broker", broker);
+    if (tradeDate) formData.set("tradeDate", tradeDate);
 
     const res = await confirmImport(formData);
     setResult(res);
@@ -86,15 +92,42 @@ export function ImportForm() {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-muted-foreground">Broker</label>
-            <Select value={broker} onValueChange={(v) => v && setBroker(v)}>
+            <Select
+              value={broker}
+              onValueChange={(v) => {
+                if (!v) return;
+                setBroker(v);
+                setPreview(null);
+                setResult(null);
+              }}
+            >
               <SelectTrigger className="h-9 w-64 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="sterling">Sterling Trader Pro</SelectItem>
+                <SelectItem value="das">DAS Trader Pro</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {needsDate && (
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-medium text-muted-foreground">
+                Trade Date for this import
+              </label>
+              <input
+                type="date"
+                value={tradeDate}
+                onChange={(e) => {
+                  setTradeDate(e.target.value);
+                  setPreview(null);
+                  setResult(null);
+                }}
+                className="flex h-9 w-64 rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-muted-foreground">File</label>
@@ -128,7 +161,7 @@ export function ImportForm() {
             </div>
           </div>
 
-          <Button onClick={handlePreview} disabled={!file || loading} className="h-9 w-full text-sm">
+          <Button onClick={handlePreview} disabled={!canPreview || loading} className="h-9 w-full text-sm">
             {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
             Preview Import
           </Button>

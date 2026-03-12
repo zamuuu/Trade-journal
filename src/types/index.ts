@@ -34,7 +34,9 @@ export interface ImportPreview {
 export interface BrokerParser {
   name: string;
   fileExtensions: string[];
-  parse(content: string): NormalizedExecution[];
+  /** Extra fields this broker requires from the UI (e.g. tradeDate for DAS). */
+  extraFields?: { key: string; label: string; type: "date" }[];
+  parse(content: string, options?: Record<string, string>): NormalizedExecution[];
 }
 
 // Calendar day data

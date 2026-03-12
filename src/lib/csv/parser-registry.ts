@@ -1,8 +1,10 @@
 import { BrokerParser } from "@/types";
 import { sterlingParser } from "./parsers/sterling";
+import { dasParser } from "./parsers/das";
 
 const parsers: Record<string, BrokerParser> = {
   sterling: sterlingParser,
+  das: dasParser,
 };
 
 export function getParser(brokerId: string): BrokerParser | null {
