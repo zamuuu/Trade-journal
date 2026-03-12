@@ -38,6 +38,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateRangeFilter } from "@/components/trades/date-range-filter";
 import {
   ChevronLeft,
   ChevronRight,
@@ -84,7 +85,7 @@ interface TradesTableProps {
   totalPages: number;
   pageSize: number;
   totalCount: number;
-  filters: { symbol?: string; side?: string; setup?: string; tag?: string };
+  filters: { symbol?: string; side?: string; setup?: string; tag?: string; dateFrom?: string; dateTo?: string };
   setups: string[];
   allTags: { id: string; name: string }[];
 }
@@ -492,6 +493,17 @@ export function TradesTable({
             </SelectContent>
           </Select>
         )}
+        <DateRangeFilter
+          dateFrom={filters.dateFrom}
+          dateTo={filters.dateTo}
+          onChange={(from, to) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (from) params.set("dateFrom", from); else params.delete("dateFrom");
+            if (to) params.set("dateTo", to); else params.delete("dateTo");
+            params.set("page", "1");
+            router.push("/trades?" + params.toString());
+          }}
+        />
 
         {/* Spacer */}
         <div className="flex-1" />

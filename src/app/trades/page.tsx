@@ -8,6 +8,8 @@ interface SearchParams {
   side?: string;
   setup?: string;
   tag?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page?: string;
   pageSize?: string;
 }
@@ -31,6 +33,18 @@ export default async function TradesPage({
   if (params.side) where.side = params.side;
   if (params.setup) where.setup = params.setup;
   if (params.tag) where.tags = { some: { tag: { name: params.tag } } };
+  if (params.dateFrom || params.dateTo) {
+    const entryDateFilter: Record<string, Date> = {};
+    if (params.dateFrom) {
+      const [y, m, d] = params.dateFrom.split("-").map(Number);
+      entryDateFilter.gte = new Date(y, m - 1, d, 0, 0, 0);
+    }
+    if (params.dateTo) {
+      const [y, m, d] = params.dateTo.split("-").map(Number);
+      entryDateFilter.lte = new Date(y, m - 1, d, 23, 59, 59, 999);
+    }
+    where.entryDate = entryDateFilter;
+  }
 
   const [trades, totalCount] = await Promise.all([
     prisma.trade.findMany({
