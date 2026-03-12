@@ -41,6 +41,7 @@ import { PnlBySetupWidget } from "./pnl-by-setup-widget";
 import { Last7DaysWidget } from "./last-7-days-widget";
 import { WinLossDonutWidget } from "./win-loss-donut-widget";
 import { PnlByDayWidget } from "./pnl-by-day-widget";
+import { PnlByPriceWidget } from "./pnl-by-price-widget";
 import { WidgetCustomizer } from "./widget-customizer";
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -336,6 +337,8 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
             colorClass="text-loss"
           />
         );
+      case "pnl-by-price":
+        return <PnlByPriceWidget ranges={data.priceRangePnl} />;
       default:
         return null;
     }

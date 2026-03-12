@@ -79,6 +79,12 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: "Highest streak of consecutive losing trades",
     size: "stat",
   },
+  {
+    id: "pnl-by-price",
+    name: "Performance By Price",
+    description: "P&L breakdown by stock price range with percentage bars",
+    size: "list",
+  },
 ];
 
 // Default config: the 4 widgets the user selected

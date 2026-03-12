@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { calculateMetrics } from "@/lib/calculations/metrics";
 import { getDashboardConfig } from "@/actions/dashboard-actions";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
-import { SetupStats, DailyPnl, DayOfWeekPnl } from "@/types";
+import { SetupStats, DailyPnl, DayOfWeekPnl, PriceRangePnl } from "@/types";
 
 export default async function DashboardPage() {
   const [trades, recentTrades, widgetConfig] = await Promise.all([
@@ -118,6 +118,40 @@ export default async function DashboardPage() {
     percent: totalAbsPnl > 0 ? Math.round((Math.abs(d.pnl) / totalAbsPnl) * 10000) / 100 : 0,
   }));
 
+  // Aggregate P&L by stock price range (based on avgEntryPrice)
+  const PRICE_RANGES: { label: string; min: number; max: number }[] = [
+    { label: "< $0.50", min: 0, max: 0.5 },
+    { label: "$0.50 - $0.99", min: 0.5, max: 1 },
+    { label: "$1 - $2.99", min: 1, max: 3 },
+    { label: "$3 - $4.99", min: 3, max: 5 },
+    { label: "$5 - $9.99", min: 5, max: 10 },
+    { label: "$10 - $19.99", min: 10, max: 20 },
+    { label: "$20 - $50", min: 20, max: 50 },
+    { label: "> $50", min: 50, max: Infinity },
+  ];
+  const priceBuckets = PRICE_RANGES.map((r) => ({
+    ...r,
+    pnl: 0,
+    tradeCount: 0,
+  }));
+  for (const t of trades) {
+    const price = t.avgEntryPrice;
+    const bucket = priceBuckets.find((b) => price >= b.min && price < b.max);
+    if (bucket) {
+      bucket.pnl = Math.round((bucket.pnl + t.pnl) * 100) / 100;
+      bucket.tradeCount++;
+    }
+  }
+  const totalAbsPricePnl = priceBuckets.reduce((sum, b) => sum + Math.abs(b.pnl), 0);
+  const priceRangePnl: PriceRangePnl[] = priceBuckets.map((b) => ({
+    label: b.label,
+    min: b.min,
+    max: b.max,
+    pnl: b.pnl,
+    percent: totalAbsPricePnl > 0 ? Math.round((Math.abs(b.pnl) / totalAbsPricePnl) * 10000) / 100 : 0,
+    tradeCount: b.tradeCount,
+  }));
+
   return (
     <WidgetGrid
       initialConfig={widgetConfig}
@@ -131,6 +165,7 @@ export default async function DashboardPage() {
         setupStats,
         last7Days,
         dayOfWeekPnl,
+        priceRangePnl,
       }}
     />
   );

@@ -1,20 +1,20 @@
-import { DayOfWeekPnl } from "@/types";
+import { PriceRangePnl } from "@/types";
 
-interface PnlByDayWidgetProps {
-  days: DayOfWeekPnl[];
+interface PnlByPriceWidgetProps {
+  ranges: PriceRangePnl[];
 }
 
-export function PnlByDayWidget({ days }: PnlByDayWidgetProps) {
+export function PnlByPriceWidget({ ranges }: PnlByPriceWidgetProps) {
   return (
     <div className="rounded-md border border-border bg-card px-4 py-3">
       <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
-        Performance By Day Of Week
+        Performance By Price
       </p>
 
       <div className="mt-3 space-y-2.5">
-        {days.map((d) => {
-          const isPositive = d.pnl > 0;
-          const isNegative = d.pnl < 0;
+        {ranges.map((r) => {
+          const isPositive = r.pnl > 0;
+          const isNegative = r.pnl < 0;
           const colorClass = isPositive
             ? "text-profit"
             : isNegative
@@ -26,13 +26,13 @@ export function PnlByDayWidget({ days }: PnlByDayWidgetProps) {
               ? "bg-loss"
               : "bg-muted-foreground/20";
           const sign = isPositive ? "+" : isNegative ? "-" : "";
-          const absVal = Math.abs(d.pnl).toFixed(2);
+          const absVal = Math.abs(r.pnl).toFixed(2);
 
           return (
-            <div key={d.day}>
+            <div key={r.label}>
               <div className="flex items-baseline justify-between">
                 <span className="text-[13px] font-medium text-foreground">
-                  {d.label}
+                  {r.label}
                 </span>
                 <div className="flex items-baseline gap-1.5">
                   <span
@@ -44,14 +44,14 @@ export function PnlByDayWidget({ days }: PnlByDayWidgetProps) {
                     {sign}{"$"}{absVal}
                   </span>
                   <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                    {d.percent.toFixed(1)}%
+                    {r.percent.toFixed(1)}%
                   </span>
                 </div>
               </div>
               <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: "#464F5B" }}>
                 <div
                   className={"h-full rounded-full transition-all " + barColorClass}
-                  style={{ width: d.percent + "%" }}
+                  style={{ width: r.percent + "%" }}
                 />
               </div>
             </div>

@@ -101,6 +101,16 @@ export interface DayOfWeekPnl {
   tradeCount: number;
 }
 
+// P&L aggregated by stock price range
+export interface PriceRangePnl {
+  label: string;    // e.g. "< $0.50", "$1 - $2.99"
+  min: number;      // lower bound (inclusive)
+  max: number;      // upper bound (exclusive), Infinity for last bucket
+  pnl: number;
+  percent: number;  // % of total absolute P&L
+  tradeCount: number;
+}
+
 // All possible data the dashboard can pass to widgets
 export interface DashboardData {
   metrics: DashboardMetrics;
@@ -116,6 +126,7 @@ export interface DashboardData {
   setupStats: SetupStats[];
   last7Days: DailyPnl[];
   dayOfWeekPnl: DayOfWeekPnl[];
+  priceRangePnl: PriceRangePnl[];
 }
 
 // Detailed reports stats (all 24 metrics for the Detailed tab)
