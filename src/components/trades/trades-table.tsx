@@ -47,12 +47,14 @@ import {
   Trash2,
   Tag,
   Tags,
+  GitMerge,
 } from "lucide-react";
 import { useState, useMemo, useTransition, useEffect } from "react";
 import {
   bulkDeleteTrades,
   bulkAddTagToTrades,
   bulkRemoveTagFromTrades,
+  bulkMergeTrades,
   getAllTags,
   getTagsForTrades,
 } from "@/actions/trade-actions";
@@ -146,6 +148,8 @@ export function TradesTable({
   const [removeTagPopoverOpen, setRemoveTagPopoverOpen] = useState(false);
   const [selectedTradesTags, setSelectedTradesTags] = useState<{ id: string; name: string; count: number }[]>([]);
   const [tagIdsToRemove, setTagIdsToRemove] = useState<Set<string>>(new Set());
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Fetch existing tags when add-tag popover opens
@@ -278,6 +282,43 @@ export function TradesTable({
       setSelected(new Set());
       setRemoveTagPopoverOpen(false);
       setTagIdsToRemove(new Set());
+      router.refresh();
+    });
+  }
+
+  // ── Merge helpers ────────────────────────────────────────────
+
+  const selectedTrades = trades.filter((t) => selected.has(t.id));
+  const selectedSymbols = new Set(selectedTrades.map((t) => t.symbol));
+  const canMerge = selected.size >= 2 && selectedSymbols.size === 1;
+
+  function openMergeDialog() {
+    setMergeError(null);
+    if (selected.size < 2) {
+      setMergeError("Select at least 2 trades to merge.");
+      setMergeDialogOpen(true);
+      return;
+    }
+    if (selectedSymbols.size > 1) {
+      setMergeError(
+        `Cannot merge trades with different symbols: ${Array.from(selectedSymbols).join(", ")}`
+      );
+      setMergeDialogOpen(true);
+      return;
+    }
+    setMergeDialogOpen(true);
+  }
+
+  function handleBulkMerge() {
+    const ids = Array.from(selected);
+    startTransition(async () => {
+      const result = await bulkMergeTrades(ids);
+      if (result.error) {
+        setMergeError(result.error);
+        return;
+      }
+      setSelected(new Set());
+      setMergeDialogOpen(false);
       router.refresh();
     });
   }
@@ -464,6 +505,11 @@ export function TradesTable({
                 Remove Tags
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={openMergeDialog}>
+                <GitMerge className="mr-2 h-4 w-4" />
+                Merge Trades
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => setDeleteDialogOpen(true)}
@@ -590,6 +636,41 @@ export function TradesTable({
             >
               {isPending ? "Deleting..." : "Delete"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge confirmation dialog */}
+      <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {mergeError ? "Cannot Merge" : `Merge ${selectedCount} trades?`}
+            </DialogTitle>
+            <DialogDescription>
+              {mergeError ? (
+                mergeError
+              ) : (
+                <>
+                  This will combine {selectedCount} <strong>{Array.from(selectedSymbols)[0]}</strong> trades
+                  into a single trade. All executions, screenshots, and tags will
+                  be preserved. This action cannot be undone.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              {mergeError ? "OK" : "Cancel"}
+            </DialogClose>
+            {!mergeError && (
+              <Button
+                disabled={isPending || !canMerge}
+                onClick={handleBulkMerge}
+              >
+                {isPending ? "Merging..." : "Merge"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

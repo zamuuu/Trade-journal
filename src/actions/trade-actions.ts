@@ -139,6 +139,153 @@ export async function bulkRemoveTagFromTrades(
   revalidatePath("/journal");
 }
 
+/**
+ * Merge multiple trades into one. All trades must share the same symbol.
+ * The surviving trade keeps the earliest entryDate.
+ * All executions, screenshots, and tags are reassigned to the survivor.
+ * Aggregated fields (quantity, prices, pnl) are recalculated from executions.
+ * Returns { error: string } on validation failure, or { mergedTradeId } on success.
+ */
+export async function bulkMergeTrades(
+  tradeIds: string[]
+): Promise<{ error?: string; mergedTradeId?: string }> {
+  if (tradeIds.length < 2) return { error: "Select at least 2 trades to merge." };
+
+  // Fetch the trades with their executions
+  const trades = await prisma.trade.findMany({
+    where: { id: { in: tradeIds } },
+    include: { executions: true },
+    orderBy: { entryDate: "asc" },
+  });
+
+  if (trades.length < 2) return { error: "Could not find the selected trades." };
+
+  // Validate all trades share the same symbol
+  const symbols = new Set(trades.map((t) => t.symbol));
+  if (symbols.size > 1) {
+    return {
+      error: `Cannot merge trades with different symbols: ${Array.from(symbols).join(", ")}`,
+    };
+  }
+
+  // The survivor is the trade with the earliest entry date (already sorted)
+  const survivor = trades[0];
+  const toRemove = trades.slice(1);
+  const toRemoveIds = toRemove.map((t) => t.id);
+
+  // Collect ALL executions across all trades being merged
+  const allExecutions = trades.flatMap((t) => t.executions);
+
+  // Reassign executions from the other trades to the survivor
+  if (toRemoveIds.length > 0) {
+    await prisma.execution.updateMany({
+      where: { tradeId: { in: toRemoveIds } },
+      data: { tradeId: survivor.id },
+    });
+  }
+
+  // Reassign screenshots from the other trades to the survivor
+  await prisma.screenshot.updateMany({
+    where: { tradeId: { in: toRemoveIds } },
+    data: { tradeId: survivor.id },
+  });
+
+  // Merge tags: collect unique tags from all trades, add missing ones to survivor
+  const existingTags = await prisma.tradeTag.findMany({
+    where: { tradeId: survivor.id },
+    select: { tagId: true },
+  });
+  const survivorTagIds = new Set(existingTags.map((t) => t.tagId));
+
+  const otherTags = await prisma.tradeTag.findMany({
+    where: { tradeId: { in: toRemoveIds } },
+    select: { tagId: true },
+  });
+  const newTagIds = [...new Set(otherTags.map((t) => t.tagId))].filter(
+    (id) => !survivorTagIds.has(id)
+  );
+
+  if (newTagIds.length > 0) {
+    await prisma.tradeTag.createMany({
+      data: newTagIds.map((tagId) => ({ tradeId: survivor.id, tagId })),
+    });
+  }
+
+  // Delete the other trades (cascade deletes their TradeTags, but executions/screenshots already moved)
+  await prisma.trade.deleteMany({
+    where: { id: { in: toRemoveIds } },
+  });
+
+  // Recalculate aggregated fields from all executions
+  // Separate buy-side and sell-side executions
+  const buys = allExecutions.filter((e) => e.side === "BUY");
+  const sells = allExecutions.filter(
+    (e) => e.side === "SELL" || e.side === "SELL_SHORT"
+  );
+
+  const totalBuyQty = buys.reduce((s, e) => s + e.quantity, 0);
+  const totalSellQty = sells.reduce((s, e) => s + e.quantity, 0);
+
+  const avgEntry =
+    totalBuyQty > 0
+      ? buys.reduce((s, e) => s + e.price * e.quantity, 0) / totalBuyQty
+      : survivor.avgEntryPrice;
+
+  const avgExit =
+    totalSellQty > 0
+      ? sells.reduce((s, e) => s + e.price * e.quantity, 0) / totalSellQty
+      : null;
+
+  // For LONG: pnl = sellValue - buyValue; for SHORT: pnl = buyValue - sellValue (but executions may differ)
+  // Simplest: sum pnl of all original trades
+  const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
+  const totalQuantity = trades.reduce((s, t) => s + t.totalQuantity, 0);
+
+  // Determine status and dates
+  const latestExitDate = trades
+    .map((t) => t.exitDate)
+    .filter((d): d is Date => d !== null)
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+  const hasOpen = trades.some((t) => t.status === "OPEN");
+  const status = hasOpen ? "OPEN" : "CLOSED";
+
+  // Merge notes (combine non-null notes)
+  const allNotes = trades
+    .map((t) => t.notes)
+    .filter((n): n is string => n !== null && n.trim() !== "");
+  const mergedNotes = allNotes.length > 0 ? allNotes.join("\n---\n") : null;
+
+  // Keep setup from the survivor, or pick the first non-null one
+  const setup = survivor.setup ?? trades.find((t) => t.setup)?.setup ?? null;
+
+  // Update the survivor trade
+  await prisma.trade.update({
+    where: { id: survivor.id },
+    data: {
+      totalQuantity,
+      avgEntryPrice: Math.round(avgEntry * 10000) / 10000,
+      avgExitPrice: avgExit ? Math.round(avgExit * 10000) / 10000 : null,
+      pnl: Math.round(totalPnl * 100) / 100,
+      exitDate: latestExitDate,
+      status,
+      notes: mergedNotes,
+      setup,
+    },
+  });
+
+  await cleanupOrphanedTags();
+
+  revalidatePath("/trades");
+  revalidatePath("/trades/" + survivor.id);
+  revalidatePath("/");
+  revalidatePath("/journal");
+  revalidatePath("/calendar");
+  revalidatePath("/reports");
+
+  return { mergedTradeId: survivor.id };
+}
+
 // ── Single-trade actions (used by trade detail page) ────────────
 
 /**
