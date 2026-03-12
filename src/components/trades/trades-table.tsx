@@ -48,6 +48,7 @@ import {
   Tag,
   Tags,
   GitMerge,
+  Split,
 } from "lucide-react";
 import { useState, useMemo, useTransition, useEffect } from "react";
 import {
@@ -55,6 +56,7 @@ import {
   bulkAddTagToTrades,
   bulkRemoveTagFromTrades,
   bulkMergeTrades,
+  splitTrade,
   getAllTags,
   getTagsForTrades,
 } from "@/actions/trade-actions";
@@ -150,6 +152,9 @@ export function TradesTable({
   const [tagIdsToRemove, setTagIdsToRemove] = useState<Set<string>>(new Set());
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [splitError, setSplitError] = useState<string | null>(null);
+  const [splitResult, setSplitResult] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Fetch existing tags when add-tag popover opens
@@ -322,6 +327,38 @@ export function TradesTable({
       router.refresh();
     });
   }
+
+  // ── Split helpers ─────────────────────────────────────────────
+
+  function openSplitDialog() {
+    setSplitError(null);
+    setSplitResult(null);
+    if (selected.size !== 1) {
+      setSplitError("Select exactly 1 trade to split.");
+      setSplitDialogOpen(true);
+      return;
+    }
+    setSplitDialogOpen(true);
+  }
+
+  function handleSplit() {
+    const tradeId = Array.from(selected)[0];
+    startTransition(async () => {
+      const result = await splitTrade(tradeId);
+      if (result.error) {
+        setSplitError(result.error);
+        return;
+      }
+      setSplitResult(result.tradeIds?.length ?? 0);
+      setSelected(new Set());
+      setSplitDialogOpen(false);
+      router.refresh();
+    });
+  }
+
+  const splitTarget = selected.size === 1
+    ? trades.find((t) => selected.has(t.id))
+    : null;
 
   function toggleTagToRemove(tagId: string) {
     const next = new Set(tagIdsToRemove);
@@ -509,6 +546,10 @@ export function TradesTable({
                 <GitMerge className="mr-2 h-4 w-4" />
                 Merge Trades
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={openSplitDialog}>
+                <Split className="mr-2 h-4 w-4" />
+                Split Trade
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
@@ -669,6 +710,45 @@ export function TradesTable({
                 onClick={handleBulkMerge}
               >
                 {isPending ? "Merging..." : "Merge"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Split confirmation dialog */}
+      <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {splitError
+                ? "Cannot Split"
+                : `Split ${splitTarget?.symbol ?? ""} trade?`}
+            </DialogTitle>
+            <DialogDescription>
+              {splitError ? (
+                splitError
+              ) : (
+                <>
+                  This will split the <strong>{splitTarget?.symbol}</strong> trade
+                  into separate trades based on execution round-trips (each time
+                  the position returns to zero). Tags, screenshots, notes, and
+                  setup will be copied to all resulting trades. This action cannot
+                  be undone.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              {splitError ? "OK" : "Cancel"}
+            </DialogClose>
+            {!splitError && (
+              <Button
+                disabled={isPending || selected.size !== 1}
+                onClick={handleSplit}
+              >
+                {isPending ? "Splitting..." : "Split"}
               </Button>
             )}
           </DialogFooter>

@@ -286,6 +286,202 @@ export async function bulkMergeTrades(
   return { mergedTradeId: survivor.id };
 }
 
+/**
+ * Split a single trade into multiple trades based on execution round-trips.
+ * Walks executions chronologically, tracking net position. Each time the
+ * position returns to 0 a new independent trade is created.
+ *
+ * Tags, screenshots, notes and setup are copied to every resulting trade.
+ * Returns { error } on failure, or { tradeIds } with the new trade IDs.
+ */
+export async function splitTrade(
+  tradeId: string
+): Promise<{ error?: string; tradeIds?: string[] }> {
+  // Fetch trade with executions, tags, screenshots
+  const trade = await prisma.trade.findUnique({
+    where: { id: tradeId },
+    include: {
+      executions: { orderBy: { timestamp: "asc" } },
+      tags: { select: { tagId: true } },
+      screenshots: true,
+    },
+  });
+
+  if (!trade) return { error: "Trade not found." };
+  if (trade.executions.length < 2) {
+    return { error: "This trade has only one execution and cannot be split." };
+  }
+
+  // ── Detect round-trips ──────────────────────────────────────
+  type ExecGroup = typeof trade.executions;
+  const groups: ExecGroup[] = [];
+  let position = 0;
+  let currentGroup: ExecGroup = [];
+
+  for (const exec of trade.executions) {
+    const delta =
+      exec.side === "BUY" ? exec.quantity : -exec.quantity;
+    position += delta;
+    currentGroup.push(exec);
+
+    if (position === 0 && currentGroup.length > 0) {
+      groups.push(currentGroup);
+      currentGroup = [];
+    }
+  }
+
+  // Remaining executions where position != 0 → keep as one final group (OPEN trade)
+  if (currentGroup.length > 0) {
+    groups.push(currentGroup);
+  }
+
+  if (groups.length < 2) {
+    return {
+      error: "This trade contains a single round-trip and cannot be split further.",
+    };
+  }
+
+  // ── Build new trades from each group ────────────────────────
+  const tagIds = trade.tags.map((t) => t.tagId);
+  const newTradeIds: string[] = [];
+
+  for (let i = 0; i < groups.length; i++) {
+    const execs = groups[i];
+
+    // Determine side from first execution
+    const firstExec = execs[0];
+    const side: "LONG" | "SHORT" =
+      firstExec.side === "BUY" ? "LONG" : "SHORT";
+
+    // Separate entries and exits
+    const entries =
+      side === "LONG"
+        ? execs.filter((e) => e.side === "BUY")
+        : execs.filter((e) => e.side === "SELL_SHORT");
+    const exits =
+      side === "LONG"
+        ? execs.filter((e) => e.side === "SELL" || e.side === "SELL_SHORT")
+        : execs.filter((e) => e.side === "BUY");
+
+    // Weighted averages
+    const totalEntryQty = entries.reduce((s, e) => s + e.quantity, 0);
+    const totalExitQty = exits.reduce((s, e) => s + e.quantity, 0);
+
+    const avgEntryPrice =
+      totalEntryQty > 0
+        ? entries.reduce((s, e) => s + e.price * e.quantity, 0) / totalEntryQty
+        : 0;
+    const avgExitPrice =
+      totalExitQty > 0
+        ? exits.reduce((s, e) => s + e.price * e.quantity, 0) / totalExitQty
+        : null;
+
+    const totalQuantity = totalEntryQty;
+
+    // PnL
+    let pnl = 0;
+    if (avgExitPrice !== null) {
+      pnl =
+        side === "LONG"
+          ? (avgExitPrice - avgEntryPrice) * totalQuantity
+          : (avgEntryPrice - avgExitPrice) * totalQuantity;
+    }
+
+    // Check if this group's position ended at 0 (closed) or not (open)
+    let groupPosition = 0;
+    for (const e of execs) {
+      groupPosition += e.side === "BUY" ? e.quantity : -e.quantity;
+    }
+    const status = groupPosition === 0 ? "CLOSED" : "OPEN";
+
+    const entryDate = entries[0]?.timestamp ?? execs[0].timestamp;
+    const exitDate =
+      status === "CLOSED" && exits.length > 0
+        ? exits[exits.length - 1].timestamp
+        : null;
+
+    // For the first group, reuse the original trade (update it)
+    // For subsequent groups, create new trades
+    if (i === 0) {
+      await prisma.trade.update({
+        where: { id: trade.id },
+        data: {
+          side,
+          status,
+          entryDate,
+          exitDate,
+          totalQuantity,
+          avgEntryPrice: Math.round(avgEntryPrice * 10000) / 10000,
+          avgExitPrice: avgExitPrice
+            ? Math.round(avgExitPrice * 10000) / 10000
+            : null,
+          pnl: Math.round(pnl * 100) / 100,
+        },
+      });
+      newTradeIds.push(trade.id);
+
+      // Remove executions that don't belong to this group
+      const keepIds = new Set(execs.map((e) => e.id));
+      // We'll reassign other executions later when creating new trades
+    } else {
+      // Create a new trade
+      const newTrade = await prisma.trade.create({
+        data: {
+          symbol: trade.symbol,
+          side,
+          status,
+          entryDate,
+          exitDate,
+          totalQuantity,
+          avgEntryPrice: Math.round(avgEntryPrice * 10000) / 10000,
+          avgExitPrice: avgExitPrice
+            ? Math.round(avgExitPrice * 10000) / 10000
+            : null,
+          pnl: Math.round(pnl * 100) / 100,
+          notes: trade.notes,
+          setup: trade.setup,
+        },
+      });
+      newTradeIds.push(newTrade.id);
+
+      // Reassign executions to the new trade
+      const execIds = execs.map((e) => e.id);
+      await prisma.execution.updateMany({
+        where: { id: { in: execIds } },
+        data: { tradeId: newTrade.id },
+      });
+
+      // Copy tags
+      if (tagIds.length > 0) {
+        await prisma.tradeTag.createMany({
+          data: tagIds.map((tagId) => ({ tradeId: newTrade.id, tagId })),
+        });
+      }
+
+      // Copy screenshots (duplicate them for each new trade)
+      if (trade.screenshots.length > 0) {
+        await prisma.screenshot.createMany({
+          data: trade.screenshots.map((s) => ({
+            tradeId: newTrade.id,
+            filePath: s.filePath,
+            caption: s.caption,
+            category: s.category,
+          })),
+        });
+      }
+    }
+  }
+
+  revalidatePath("/trades");
+  revalidatePath("/trades/" + trade.id);
+  revalidatePath("/");
+  revalidatePath("/journal");
+  revalidatePath("/calendar");
+  revalidatePath("/reports");
+
+  return { tradeIds: newTradeIds };
+}
+
 // ── Single-trade actions (used by trade detail page) ────────────
 
 /**
