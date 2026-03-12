@@ -302,9 +302,10 @@ export function DayCard({ day, allTags, noteTemplates }: DayCardProps) {
             )}
           </button>
           {tradesExpanded && (
+            <div className="relative max-h-[232px] overflow-y-auto">
             <Table className="table-fixed">
               <colgroup><col className="w-[12%]" /><col className="w-[12%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[8%]" /><col className="w-[12%]" /><col className="w-[18%]" /><col className="w-[18%]" /></colgroup>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="pl-6 text-xs">Time</TableHead>
                   <TableHead className="text-xs">Symbol</TableHead>
@@ -384,6 +385,7 @@ export function DayCard({ day, allTags, noteTemplates }: DayCardProps) {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       )}
