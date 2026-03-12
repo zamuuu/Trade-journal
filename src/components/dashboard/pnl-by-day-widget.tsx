@@ -6,12 +6,12 @@ interface PnlByDayWidgetProps {
 
 export function PnlByDayWidget({ days }: PnlByDayWidgetProps) {
   return (
-    <div className="rounded-md border border-border bg-card px-4 py-3">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card px-4 py-3">
       <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
         Performance By Day Of Week
       </p>
 
-      <div className="mt-3 space-y-2.5">
+      <div className="mt-3 flex flex-1 flex-col justify-between">
         {days.map((d) => {
           const isPositive = d.pnl > 0;
           const isNegative = d.pnl < 0;

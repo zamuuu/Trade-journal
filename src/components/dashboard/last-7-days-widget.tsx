@@ -11,11 +11,11 @@ export function Last7DaysWidget({ days }: Last7DaysWidgetProps) {
   const monthLabel = format(firstDate, "MMM yyyy");
 
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card p-4">
       <p className="mb-3 text-[13px] font-medium uppercase tracking-wider text-muted-foreground">
         {monthLabel}
       </p>
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid flex-1 grid-cols-7 gap-2">
         {days.map((day) => {
           const date = parseISO(day.date);
           const dayNum = format(date, "d");
@@ -32,7 +32,6 @@ export function Last7DaysWidget({ days }: Last7DaysWidgetProps) {
             <div
               key={day.date}
               className="flex flex-col justify-between rounded-md border border-border bg-background/50 p-3"
-              style={{ minHeight: "100px" }}
             >
               {/* Top row: day number + day name */}
               <div className="flex items-baseline gap-1">

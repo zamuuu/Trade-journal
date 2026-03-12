@@ -26,7 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WidgetConfig, DashboardData } from "@/types";
+import { WidgetConfig, DashboardData, WidgetSize } from "@/types";
 import {
   WIDGET_REGISTRY,
   DEFAULT_WIDGETS,
@@ -43,6 +43,33 @@ import { WinLossDonutWidget } from "./win-loss-donut-widget";
 import { PnlByDayWidget } from "./pnl-by-day-widget";
 import { PnlByPriceWidget } from "./pnl-by-price-widget";
 import { WidgetCustomizer } from "./widget-customizer";
+
+// ─── Grid size constants ─────────────────────────────────────────
+// Base row height in pixels — every widget height is a multiple of this
+const ROW_H = 200;
+const GAP = 10; // gap between cells in px
+
+/** CSS grid span + height for each widget size */
+function sizeToGrid(size: WidgetSize): {
+  colSpan: number;
+  rowSpan: number;
+} {
+  switch (size) {
+    case "small":
+      return { colSpan: 1, rowSpan: 1 };
+    case "medium":
+      return { colSpan: 1, rowSpan: 2 };
+    case "large":
+      return { colSpan: 2, rowSpan: 2 };
+    case "wide":
+      return { colSpan: 4, rowSpan: 1 };
+  }
+}
+
+/** Pixel height for a given row-span (accounts for gap between rows) */
+function spanHeight(rowSpan: number): number {
+  return ROW_H * rowSpan + GAP * (rowSpan - 1);
+}
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -77,7 +104,7 @@ function SortableEditRow({
     opacity: isDragging ? 0.4 : 1,
   };
 
-  const sizeLabel = def?.size ?? "stat";
+  const sizeLabel = def?.size ?? "small";
 
   return (
     <div
@@ -86,7 +113,6 @@ function SortableEditRow({
       {...attributes}
       className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
     >
-      {/* Drag handle */}
       <button
         ref={setActivatorNodeRef}
         {...listeners}
@@ -95,18 +121,12 @@ function SortableEditRow({
       >
         <GripVertical className="h-4 w-4" />
       </button>
-
-      {/* Widget name */}
       <span className="flex-1 text-sm font-medium">
         {def?.name ?? id}
       </span>
-
-      {/* Size badge */}
       <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
         {sizeLabel}
       </span>
-
-      {/* Remove button */}
       <button
         onClick={onRemove}
         className="rounded p-1 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -127,7 +147,6 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // dnd-kit sensor: require 5px movement before starting drag
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -140,13 +159,6 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
     .filter((w) => w.enabled)
     .sort((a, b) => a.order - b.order);
 
-  const statWidgets = enabledWidgets.filter(
-    (w) => getWidgetDefinition(w.id)?.size === "stat"
-  );
-  const largeWidgets = enabledWidgets.filter(
-    (w) => getWidgetDefinition(w.id)?.size !== "stat"
-  );
-
   // ── Config persistence ────────────────────────────────────────
 
   function persistConfig(newConfig: WidgetConfig[]) {
@@ -155,8 +167,6 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
       await updateDashboardConfig(newConfig);
     });
   }
-
-  // ── Normal mode handlers ──────────────────────────────────────
 
   function handleToggleWidget(widgetId: string, enabled: boolean) {
     const source = editMode ? draftConfig : config;
@@ -344,8 +354,6 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
     }
   }
 
-  // ── Grid style helper (view mode only) ─────────────────────────
-
   // ── Render ────────────────────────────────────────────────────
 
   return (
@@ -428,7 +436,6 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
             </div>
           </SortableContext>
 
-          {/* Drag overlay for visual feedback */}
           <DragOverlay>
             {activeId ? (
               <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-card px-3 py-2.5 opacity-90 shadow-lg">
@@ -441,43 +448,37 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
           </DragOverlay>
         </DndContext>
       ) : (
-        <>
-          {/* ── Normal mode: stat row + large grid ── */}
-          {statWidgets.length > 0 && (
-            <div
-              className="grid gap-3"
-              style={{
-                gridTemplateColumns: `repeat(${Math.min(statWidgets.length, 6)}, minmax(0, 1fr))`,
-              }}
-            >
-              {statWidgets.map((w) => (
-                <div key={w.id}>{renderWidgetContent(w.id)}</div>
-              ))}
-            </div>
-          )}
-
-          {largeWidgets.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              {largeWidgets.map((w) => {
-                const def = getWidgetDefinition(w.id);
-                if (!def) return null;
-                const isWide = def.size === "wide";
-                const isChart = def.size === "chart";
-                return (
-                  <div
-                    key={w.id}
-                    className={
-                      isWide ? "" : isChart ? "lg:col-span-2" : "lg:col-span-1"
-                    }
-                    style={isWide ? { gridColumn: "1 / -1" } : undefined}
-                  >
-                    {renderWidgetContent(w.id)}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+        /* ── View mode: 4-column fixed grid ── */
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gridAutoRows: `${ROW_H}px`,
+            gridAutoFlow: "dense",
+            gap: `${GAP}px`,
+          }}
+        >
+          {enabledWidgets.map((w) => {
+            const def = getWidgetDefinition(w.id);
+            if (!def) return null;
+            const { colSpan, rowSpan } = sizeToGrid(def.size);
+            return (
+              <div
+                key={w.id}
+                className="overflow-hidden"
+                style={{
+                  gridColumn: `span ${colSpan}`,
+                  gridRow: `span ${rowSpan}`,
+                  height: `${spanHeight(rowSpan)}px`,
+                }}
+              >
+                <div className="h-full [&>*]:h-full [&>*]:overflow-hidden">
+                  {renderWidgetContent(w.id)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {enabledWidgets.length === 0 && (

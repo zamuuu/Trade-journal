@@ -17,7 +17,7 @@ interface RecentTradesProps {
 export function RecentTrades({ trades }: RecentTradesProps) {
   if (trades.length === 0) {
     return (
-      <div className="rounded-md border border-border bg-card p-4">
+      <div className="flex h-full flex-col rounded-md border border-border bg-card p-4">
         <p className="mb-3 text-[13px] font-medium uppercase tracking-wider text-muted-foreground">Recent Trades</p>
         <p className="text-sm text-muted-foreground">No trades yet.</p>
       </div>
@@ -25,9 +25,9 @@ export function RecentTrades({ trades }: RecentTradesProps) {
   }
 
   return (
-    <div className="rounded-md border border-border bg-card p-4">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card p-4">
       <p className="mb-3 text-[13px] font-medium uppercase tracking-wider text-muted-foreground">Recent Trades</p>
-      <div className="space-y-0">
+      <div className="flex-1 space-y-0 overflow-y-auto">
         {trades.map((trade, i) => (
           <Link
             key={trade.id}

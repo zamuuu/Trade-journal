@@ -59,8 +59,12 @@ export interface DashboardMetrics {
   maxConsecutiveLosses: number;
 }
 
-// Widget system
-export type WidgetSize = "stat" | "chart" | "list" | "wide";
+// Widget system — grid-based sizing
+// small  = 1 col × 1 row   (single metric or compact visual)
+// medium = 1 col × 2 rows  (lists, bar breakdowns)
+// large  = 2 cols × 2 rows (charts)
+// wide   = 4 cols × 1 row  (full-width compact widgets)
+export type WidgetSize = "small" | "medium" | "large" | "wide";
 
 export interface WidgetDefinition {
   id: string;

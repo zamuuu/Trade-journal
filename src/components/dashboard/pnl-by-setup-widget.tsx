@@ -7,7 +7,7 @@ interface PnlBySetupWidgetProps {
 export function PnlBySetupWidget({ stats }: PnlBySetupWidgetProps) {
   if (stats.length === 0) {
     return (
-      <div className="rounded-md border border-border bg-card px-4 py-3">
+      <div className="flex h-full flex-col rounded-md border border-border bg-card px-4 py-3">
         <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
           P&L by Setup
         </p>
@@ -26,11 +26,11 @@ export function PnlBySetupWidget({ stats }: PnlBySetupWidgetProps) {
   const totalAbsPnl = stats.reduce((sum, s) => sum + Math.abs(s.netPnl), 0);
 
   return (
-    <div className="rounded-md border border-border bg-card px-4 py-3">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card px-4 py-3">
       <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
         P&L by Setup
       </p>
-      <div className="mt-3 space-y-0">
+      <div className="mt-3 flex-1 space-y-0 overflow-y-auto">
         {stats.map((s, i) => {
           const isProfit = s.netPnl >= 0;
           const barPct = (Math.abs(s.netPnl) / maxAbsPnl) * 100;

@@ -9,11 +9,11 @@ export function AvgWinLossWidget({ avgWin, avgLoss }: AvgWinLossWidgetProps) {
   const lossPct = (avgLoss / max) * 100;
 
   return (
-    <div className="rounded-md border border-border bg-card px-4 py-3">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card px-4 py-3">
       <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
         Avg Winning Trade vs Losing Trade
       </p>
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 flex flex-1 flex-col justify-center space-y-3">
         {/* Win bar */}
         <div>
           <span className="font-mono text-[15px] font-semibold tabular-nums text-profit">

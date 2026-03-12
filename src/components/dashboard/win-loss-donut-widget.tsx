@@ -18,12 +18,12 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
   const lossLength = circumference - winLength;
 
   return (
-    <div className="rounded-md border border-border bg-card px-4 py-3">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card px-4 py-3">
       <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
         Winning vs Losing Trades
       </p>
 
-      <div className="mt-3 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         {total === 0 ? (
           /* Empty state */
           <div className="flex h-[140px] w-[140px] items-center justify-center">
@@ -88,7 +88,7 @@ export function WinLossDonutWidget({ wins, losses }: WinLossDonutWidgetProps) {
 
       {/* Legend */}
       {total > 0 && (
-        <div className="mt-3 flex items-center justify-center gap-4 text-[12px]">
+        <div className="mt-auto flex items-center justify-center gap-4 pt-2 text-[12px]">
           <div className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-profit" />
             <span className="tabular-nums text-muted-foreground">
