@@ -20,6 +20,7 @@ model Trade {
   pnl           Float
   notes         String?
   setup         String?
+  rating        Int?     // 1-100 general trade score
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

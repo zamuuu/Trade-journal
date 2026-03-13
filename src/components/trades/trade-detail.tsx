@@ -35,6 +35,7 @@ import {
 import {
   updateTradeNotes,
   updateTradeSetup,
+  updateTradeRating,
   addTagToTrade,
   removeTagFromTrade,
   deleteTrade,
@@ -91,6 +92,7 @@ interface Trade {
   pnl: number;
   notes: string | null;
   setup: string | null;
+  rating: number | null;
   executions: Execution[];
   tags: Tag[];
   screenshots: Screenshot[];
@@ -680,6 +682,19 @@ export function TradeDetail({
     src: string;
     alt: string;
   } | null>(null);
+  const [ratingInput, setRatingInput] = useState(
+    trade.rating != null ? String(trade.rating) : ""
+  );
+  const [savingRating, setSavingRating] = useState(false);
+
+  async function handleSaveRating() {
+    const val = ratingInput.trim();
+    const numVal = val === "" ? null : parseInt(val, 10);
+    if (numVal !== null && (isNaN(numVal) || numVal < 1 || numVal > 100)) return;
+    setSavingRating(true);
+    await updateTradeRating(trade.id, numVal);
+    setSavingRating(false);
+  }
 
   async function handleSaveNotes() {
     setSavingNotes(true);
@@ -1031,6 +1046,72 @@ export function TradeDetail({
               >
                 <Plus className="h-3.5 w-3.5" />
               </Button>
+            </div>
+          </div>
+
+          {/* Rating */}
+          <div className="rounded-md border border-border bg-card p-4">
+            <p className="mb-2 text-[13px] font-medium uppercase tracking-wider text-muted-foreground">
+              Rating
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={ratingInput}
+                  onChange={(e) => setRatingInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveRating();
+                  }}
+                  placeholder="1-100"
+                  className="h-8 w-20 text-sm tabular-nums"
+                />
+                <Button
+                  onClick={handleSaveRating}
+                  size="sm"
+                  className="h-8 px-3"
+                  disabled={savingRating}
+                >
+                  {savingRating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+                {ratingInput.trim() && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={async () => {
+                      setRatingInput("");
+                      setSavingRating(true);
+                      await updateTradeRating(trade.id, null);
+                      setSavingRating(false);
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+              {trade.rating != null && (
+                <Badge
+                  className={`text-xs font-semibold ${
+                    trade.rating <= 20
+                      ? "bg-[var(--loss)]/15 text-[var(--loss)] border-[var(--loss)]/30"
+                      : trade.rating <= 40
+                        ? "bg-orange-500/15 text-orange-400 border-orange-500/30"
+                        : trade.rating <= 70
+                          ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                          : "bg-[var(--profit)]/15 text-[var(--profit)] border-[var(--profit)]/30"
+                  }`}
+                  variant="outline"
+                >
+                  {trade.rating}/100
+                </Badge>
+              )}
             </div>
           </div>
 

@@ -76,6 +76,7 @@ interface Trade {
   avgExitPrice: number | null;
   pnl: number;
   setup: string | null;
+  rating: number | null;
   tags: { id: string; name: string }[];
 }
 
@@ -97,10 +98,9 @@ type SortKey =
   | "symbol"
   | "side"
   | "volume"
-  | "entry"
-  | "exit"
   | "pnl"
-  | "setup";
+  | "setup"
+  | "rating";
 type SortDir = "asc" | "desc";
 
 // ─── Sort icon helper ────────────────────────────────────────────
@@ -204,17 +204,14 @@ export function TradesTable({
         case "volume":
           cmp = a.totalQuantity - b.totalQuantity;
           break;
-        case "entry":
-          cmp = a.avgEntryPrice - b.avgEntryPrice;
-          break;
-        case "exit":
-          cmp = (a.avgExitPrice ?? 0) - (b.avgExitPrice ?? 0);
-          break;
         case "pnl":
           cmp = a.pnl - b.pnl;
           break;
         case "setup":
           cmp = (a.setup ?? "").localeCompare(b.setup ?? "");
+          break;
+        case "rating":
+          cmp = (a.rating ?? 0) - (b.rating ?? 0);
           break;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -410,13 +407,13 @@ export function TradesTable({
   }: {
     column: SortKey;
     label: string;
-    align?: "left" | "right";
+    align?: "left" | "right" | "center";
   }) {
     return (
       <TableHead
         className={
           "cursor-pointer select-none px-5 py-4 text-[13px] font-semibold tracking-wide text-muted-foreground transition-colors hover:text-foreground " +
-          (align === "right" ? "text-right" : "text-left")
+          (align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left")
         }
         onClick={() => toggleSort(column)}
       >
@@ -784,20 +781,19 @@ export function TradesTable({
               <SortableHead column="symbol" label="Symbol" />
               <SortableHead column="side" label="Side" />
               <SortableHead column="volume" label="Volume" align="right" />
-              <SortableHead column="entry" label="Entry" align="right" />
-              <SortableHead column="exit" label="Exit" align="right" />
               <SortableHead column="pnl" label="P&L" align="right" />
-              <SortableHead column="setup" label="Setup" />
-              <TableHead className="px-5 py-4 text-[13px] font-semibold tracking-wide text-muted-foreground">
+              <SortableHead column="setup" label="Setup" align="center" />
+              <TableHead className="px-5 py-4 text-center text-[13px] font-semibold tracking-wide text-muted-foreground">
                 Tags
               </TableHead>
+              <SortableHead column="rating" label="Rating" align="center" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedTrades.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={9}
                   className="h-24 text-center text-sm text-muted-foreground"
                 >
                   No trades found.
@@ -845,14 +841,6 @@ export function TradesTable({
                     <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
                       {trade.totalQuantity.toLocaleString()}
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
-                      {"$"}{trade.avgEntryPrice.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-right font-mono text-[13px] tabular-nums">
-                      {trade.avgExitPrice
-                        ? <>{"$"}{trade.avgExitPrice.toFixed(2)}</>
-                        : "--"}
-                    </TableCell>
                     <TableCell
                       className={
                         "px-5 py-4 text-right font-mono text-[13px] font-semibold tabular-nums " +
@@ -865,11 +853,29 @@ export function TradesTable({
                     >
                       {trade.pnl < 0 ? "-" : ""}{"$"}{Math.abs(trade.pnl).toFixed(2)}
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-[13px] text-muted-foreground">
+                    <TableCell className="px-5 py-4 text-center text-[13px] font-semibold">
                       {trade.setup ?? ""}
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-[13px] text-muted-foreground">
+                    <TableCell className="px-5 py-4 text-center text-[12px] text-muted-foreground">
                       {trade.tags.map((t) => t.name).join(", ")}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-center">
+                      {trade.rating != null && (
+                        <span
+                          className={
+                            "inline-block rounded-full px-3 py-0.5 text-[13px] font-bold " +
+                            (trade.rating <= 20
+                              ? "bg-[var(--loss)]/15 text-[var(--loss)]"
+                              : trade.rating <= 40
+                                ? "bg-orange-500/15 text-orange-400"
+                                : trade.rating <= 70
+                                  ? "bg-yellow-500/15 text-yellow-400"
+                                  : "bg-[var(--profit)]/15 text-[var(--profit)]")
+                          }
+                        >
+                          {trade.rating}
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -890,8 +896,6 @@ export function TradesTable({
                 <TableCell className="px-5 py-3.5 text-right font-mono text-[13px] font-semibold tabular-nums text-muted-foreground">
                   {totalVolume.toLocaleString()}
                 </TableCell>
-                <TableCell />
-                <TableCell />
                 <TableCell
                   className={
                     "px-5 py-3.5 text-right font-mono text-[13px] font-semibold tabular-nums " +
@@ -904,6 +908,7 @@ export function TradesTable({
                 >
                   {totalPnl < 0 ? "-" : ""}{"$"}{Math.abs(totalPnl).toFixed(2)}
                 </TableCell>
+                <TableCell />
                 <TableCell />
                 <TableCell />
               </TableRow>

@@ -485,6 +485,24 @@ export async function splitTrade(
 // ── Single-trade actions (used by trade detail page) ────────────
 
 /**
+ * Update rating (1-100) for a single trade. Pass null to clear.
+ */
+export async function updateTradeRating(
+  tradeId: string,
+  rating: number | null
+) {
+  if (rating !== null && (rating < 1 || rating > 100 || !Number.isInteger(rating))) {
+    return;
+  }
+  await prisma.trade.update({
+    where: { id: tradeId },
+    data: { rating },
+  });
+  revalidatePath("/trades/" + tradeId);
+  revalidatePath("/trades");
+}
+
+/**
  * Update notes for a single trade.
  */
 export async function updateTradeNotes(tradeId: string, notes: string) {
