@@ -10,6 +10,8 @@ interface SearchParams {
   tag?: string;
   dateFrom?: string;
   dateTo?: string;
+  ratingMin?: string;
+  ratingMax?: string;
   page?: string;
   pageSize?: string;
 }
@@ -44,6 +46,12 @@ export default async function TradesPage({
       entryDateFilter.lte = new Date(y, m - 1, d, 23, 59, 59, 999);
     }
     where.entryDate = entryDateFilter;
+  }
+  if (params.ratingMin || params.ratingMax) {
+    const ratingFilter: Record<string, number> = {};
+    if (params.ratingMin) ratingFilter.gte = parseInt(params.ratingMin, 10);
+    if (params.ratingMax) ratingFilter.lte = parseInt(params.ratingMax, 10);
+    where.rating = ratingFilter;
   }
 
   const [trades, totalCount] = await Promise.all([
