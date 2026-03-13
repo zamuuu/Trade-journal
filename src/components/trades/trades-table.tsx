@@ -431,65 +431,77 @@ export function TradesTable({
   return (
     <div className="space-y-5">
       {/* Filters */}
-      <div className="flex items-center gap-3">
-        <Input
-          placeholder="Symbol..."
-          value={symbolFilter}
-          onChange={(e) => setSymbolFilter(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") updateFilter("symbol", symbolFilter);
-          }}
-          onBlur={() => updateFilter("symbol", symbolFilter)}
-          className="h-9 w-40 border-border bg-card text-sm"
-        />
-        <Select
-          value={filters.side ?? "all"}
-          onValueChange={(v) => updateFilter("side", v ?? "")}
-        >
-          <SelectTrigger className="h-9 w-32 border-border bg-card text-sm">
-            <SelectValue placeholder="Side" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All sides</SelectItem>
-            <SelectItem value="LONG">Long</SelectItem>
-            <SelectItem value="SHORT">Short</SelectItem>
-          </SelectContent>
-        </Select>
-        {setups.length > 0 && (
+      <div className="flex items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">Symbol</span>
+          <Input
+            placeholder="Symbol..."
+            value={symbolFilter}
+            onChange={(e) => setSymbolFilter(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") updateFilter("symbol", symbolFilter);
+            }}
+            onBlur={() => updateFilter("symbol", symbolFilter)}
+            className="h-9 w-40 border-border bg-card text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">Side</span>
           <Select
-            value={filters.setup ?? "all"}
-            onValueChange={(v) => updateFilter("setup", v ?? "")}
+            value={filters.side ?? "all"}
+            onValueChange={(v) => updateFilter("side", v ?? "")}
           >
-            <SelectTrigger className="h-9 w-40 border-border bg-card text-sm">
-              <SelectValue placeholder="Setup" />
+            <SelectTrigger className="h-9 w-32 border-border bg-card text-sm">
+              <SelectValue placeholder="Side" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All setups</SelectItem>
-              {setups.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All sides</SelectItem>
+              <SelectItem value="LONG">Long</SelectItem>
+              <SelectItem value="SHORT">Short</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        {setups.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">Setup</span>
+            <Select
+              value={filters.setup ?? "all"}
+              onValueChange={(v) => updateFilter("setup", v ?? "")}
+            >
+              <SelectTrigger className="h-9 w-40 border-border bg-card text-sm">
+                <SelectValue placeholder="Setup" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All setups</SelectItem>
+                {setups.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
         {allTags.length > 0 && (
-          <Select
-            value={filters.tag ?? "all"}
-            onValueChange={(v) => updateFilter("tag", v ?? "")}
-          >
-            <SelectTrigger className="h-9 w-40 border-border bg-card text-sm">
-              <SelectValue placeholder="Tag" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All tags</SelectItem>
-              {allTags.map((t) => (
-                <SelectItem key={t.id} value={t.name}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">Tags</span>
+            <Select
+              value={filters.tag ?? "all"}
+              onValueChange={(v) => updateFilter("tag", v ?? "")}
+            >
+              <SelectTrigger className="h-9 w-40 border-border bg-card text-sm">
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tags</SelectItem>
+                {allTags.map((t) => (
+                  <SelectItem key={t.id} value={t.name}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
         <DateRangeFilter
           dateFrom={filters.dateFrom}
@@ -865,7 +877,7 @@ export function TradesTable({
                     >
                       {trade.pnl < 0 ? "-" : ""}{"$"}{Math.abs(trade.pnl).toFixed(2)}
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-center text-[13px] font-semibold">
+                    <TableCell className="px-5 py-4 text-center text-sm font-bold text-foreground">
                       {trade.setup ?? ""}
                     </TableCell>
                     <TableCell className="px-5 py-4 text-center text-[12px] text-muted-foreground">
