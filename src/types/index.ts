@@ -123,6 +123,8 @@ export interface PriceRangePnl {
 export interface DashboardData {
   metrics: DashboardMetrics;
   pnlData: { date: string; pnl: number; cumulative: number }[];
+  dailyPnl: { date: string; pnl: number }[];
+  drawdownData: { date: string; drawdown: number }[];
   recentTrades: {
     id: string;
     symbol: string;

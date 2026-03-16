@@ -84,6 +84,18 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: "Equity curve chart over time",
     size: "large",
   },
+  {
+    id: "daily-pnl",
+    name: "Daily PnL",
+    description: "Bar chart of daily profit and loss",
+    size: "large",
+  },
+  {
+    id: "drawdown",
+    name: "Drawdown %",
+    description: "Peak-to-trough drawdown as percentage of peak equity",
+    size: "large",
+  },
 
   // ── Wide (4×1) ─────────────────────────────────────────────────
   {

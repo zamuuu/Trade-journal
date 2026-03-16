@@ -5,6 +5,7 @@ import { calculateMetrics } from "@/lib/calculations/metrics";
 import { getDashboardConfig } from "@/actions/dashboard-actions";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
 import { SetupStats, DailyPnl, DayOfWeekPnl, PriceRangePnl } from "@/types";
+import { format } from "date-fns";
 
 export default async function DashboardPage() {
   const [trades, recentTrades, widgetConfig] = await Promise.all([
@@ -49,6 +50,32 @@ export default async function DashboardPage() {
       date: t.entryDate.toISOString(),
       pnl: t.pnl,
       cumulative: Math.round(cumulative * 100) / 100,
+    };
+  });
+
+  // Daily PnL (aggregated by day) for bar chart widget
+  const dailyPnlMap: Record<string, number> = {};
+  for (const t of trades) {
+    const day = format(new Date(t.entryDate), "yyyy-MM-dd");
+    dailyPnlMap[day] = (dailyPnlMap[day] ?? 0) + t.pnl;
+  }
+  const dailyPnl = Object.entries(dailyPnlMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, pnl]) => ({
+      date,
+      pnl: Math.round(pnl * 100) / 100,
+    }));
+
+  // Drawdown % (peak-to-trough as percentage of peak equity)
+  let ddPeak = 0;
+  let ddCumulative = 0;
+  const drawdownData = trades.map((t) => {
+    ddCumulative += t.pnl;
+    if (ddCumulative > ddPeak) ddPeak = ddCumulative;
+    const drawdown = ddPeak > 0 ? ((ddPeak - ddCumulative) / ddPeak) * 100 : 0;
+    return {
+      date: t.entryDate.toISOString(),
+      drawdown: Math.round(drawdown * 100) / 100,
     };
   });
 
@@ -158,6 +185,8 @@ export default async function DashboardPage() {
       data={{
         metrics,
         pnlData,
+        dailyPnl,
+        drawdownData,
         recentTrades: recentTrades.map((t) => ({
           ...t,
           entryDate: t.entryDate.toISOString(),

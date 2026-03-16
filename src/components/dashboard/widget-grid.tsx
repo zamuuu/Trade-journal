@@ -42,6 +42,8 @@ import { Last7DaysWidget } from "./last-7-days-widget";
 import { WinLossDonutWidget } from "./win-loss-donut-widget";
 import { PnlByDayWidget } from "./pnl-by-day-widget";
 import { PnlByPriceWidget } from "./pnl-by-price-widget";
+import { DailyPnlChartWidget } from "./daily-pnl-chart-widget";
+import { DrawdownWidget } from "./drawdown-widget";
 import { WidgetCustomizer } from "./widget-customizer";
 
 // ─── Grid size constants ─────────────────────────────────────────
@@ -349,6 +351,10 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
         );
       case "pnl-by-price":
         return <PnlByPriceWidget ranges={data.priceRangePnl} />;
+      case "daily-pnl":
+        return <DailyPnlChartWidget data={data.dailyPnl} />;
+      case "drawdown":
+        return <DrawdownWidget data={data.drawdownData} />;
       default:
         return null;
     }
