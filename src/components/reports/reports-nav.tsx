@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { label: "Overview", href: "/reports" },
-  { label: "Detailed", href: "/reports/detailed" },
+  { label: "Detailed", href: "/reports" },
   { label: "Win vs Loss Days", href: "/reports/win-vs-loss-days" },
   { label: "Long vs Short", href: "/reports/long-vs-short" },
 ];

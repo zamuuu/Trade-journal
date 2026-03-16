@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/db";
+import { calculateDetailedStats } from "@/lib/calculations/detailed-stats";
+import { DetailedStatsCard } from "@/components/reports/detailed-stats-card";
 import { ReportCharts } from "@/components/reports/report-charts";
 import { format } from "date-fns";
 
@@ -10,24 +12,19 @@ export default async function ReportsPage() {
     orderBy: { entryDate: "asc" },
     select: {
       id: true,
-      entryDate: true,
       pnl: true,
-      symbol: true,
-      side: true,
+      entryDate: true,
+      exitDate: true,
+      totalQuantity: true,
+      avgEntryPrice: true,
+      avgExitPrice: true,
     },
   });
 
-  // Cumulative PnL over time
-  let cumulative = 0;
-  const cumulativePnl = trades.map((t) => {
-    cumulative += t.pnl;
-    return {
-      date: t.entryDate.toISOString(),
-      cumulative: Math.round(cumulative * 100) / 100,
-    };
-  });
+  // Detailed stats (24-metric table)
+  const stats = calculateDetailedStats(trades);
 
-  // Daily PnL
+  // Daily PnL (aggregated by day)
   const dailyMap: Record<string, number> = {};
   for (const t of trades) {
     const day = format(new Date(t.entryDate), "yyyy-MM-dd");
@@ -40,18 +37,13 @@ export default async function ReportsPage() {
       pnl: Math.round(pnl * 100) / 100,
     }));
 
-  // Win/Loss days
-  const winDays = dailyPnl.filter((d) => d.pnl > 0).length;
-  const lossDays = dailyPnl.filter((d) => d.pnl < 0).length;
-  const breakEvenDays = dailyPnl.filter((d) => d.pnl === 0).length;
-
-  // Drawdown calculation
+  // Drawdown % (peak-to-trough as percentage of peak equity)
   let peak = 0;
-  let cumulativeForDD = 0;
+  let cumulative = 0;
   const drawdownData = trades.map((t) => {
-    cumulativeForDD += t.pnl;
-    if (cumulativeForDD > peak) peak = cumulativeForDD;
-    const drawdown = peak > 0 ? ((peak - cumulativeForDD) / peak) * 100 : 0;
+    cumulative += t.pnl;
+    if (cumulative > peak) peak = cumulative;
+    const drawdown = peak > 0 ? ((peak - cumulative) / peak) * 100 : 0;
     return {
       date: t.entryDate.toISOString(),
       drawdown: Math.round(drawdown * 100) / 100,
@@ -59,11 +51,9 @@ export default async function ReportsPage() {
   });
 
   return (
-    <ReportCharts
-      cumulativePnl={cumulativePnl}
-      dailyPnl={dailyPnl}
-      drawdownData={drawdownData}
-      winLossDays={{ winDays, lossDays, breakEvenDays }}
-    />
+    <div className="space-y-4">
+      <DetailedStatsCard stats={stats} totalTrades={trades.length} />
+      <ReportCharts dailyPnl={dailyPnl} drawdownData={drawdownData} />
+    </div>
   );
 }
