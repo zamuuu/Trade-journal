@@ -48,3 +48,9 @@ next-env.d.ts
 
 # trade screenshots (user data)
 /public/screenshots/
+
+# Claude Code artifacts
+.agents/
+.interface-design/
+skills-lock.json
+nul
