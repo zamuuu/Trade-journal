@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getParser } from "@/lib/csv/parser-registry";
 import { decodeFileContent } from "@/lib/csv/encoding";
 import { reconstructTrades } from "@/lib/csv/trade-reconstructor";
-import { ReconstructedTrade } from "@/types";
+import { NormalizedExecution, ReconstructedTrade } from "@/types";
 
 /** Build parser options from form data (e.g. tradeDate for DAS). */
 function buildParserOptions(formData: FormData): Record<string, string> {
@@ -27,13 +27,20 @@ export async function previewImport(formData: FormData) {
     return { error: `Unknown broker: ${brokerId}` };
   }
 
-  // Read file content with proper encoding
+  // Read file and parse executions
   const buffer = await file.arrayBuffer();
-  const content = decodeFileContent(buffer);
-
-  // Parse executions (pass extra options like tradeDate)
   const options = buildParserOptions(formData);
-  const executions = parser.parse(content, options);
+
+  let executions: NormalizedExecution[];
+  if (parser.parseBinary) {
+    // Binary format (e.g. XLSX) — parser handles decoding internally
+    executions = parser.parseBinary(buffer, options);
+  } else {
+    // Text format (TXT, CSV) — decode encoding first, then parse
+    const content = decodeFileContent(buffer);
+    executions = parser.parse(content, options);
+  }
+
   if (executions.length === 0) {
     return { error: "No valid executions found in the file" };
   }
@@ -70,9 +77,16 @@ export async function confirmImport(formData: FormData) {
   }
 
   const buffer = await file.arrayBuffer();
-  const content = decodeFileContent(buffer);
   const options = buildParserOptions(formData);
-  const executions = parser.parse(content, options);
+
+  let executions: NormalizedExecution[];
+  if (parser.parseBinary) {
+    executions = parser.parseBinary(buffer, options);
+  } else {
+    const content = decodeFileContent(buffer);
+    executions = parser.parse(content, options);
+  }
+
   const trades = reconstructTrades(executions);
 
   if (trades.length === 0) {

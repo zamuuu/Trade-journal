@@ -37,6 +37,8 @@ export interface BrokerParser {
   /** Extra fields this broker requires from the UI (e.g. tradeDate for DAS). */
   extraFields?: { key: string; label: string; type: "date" }[];
   parse(content: string, options?: Record<string, string>): NormalizedExecution[];
+  /** For binary formats (e.g. XLSX). If present, import-actions uses this instead of parse(). */
+  parseBinary?(buffer: ArrayBuffer, options?: Record<string, string>): NormalizedExecution[];
 }
 
 // Calendar day data

@@ -41,7 +41,8 @@ export function ImportForm() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const needsDate = broker === "das";
+  const needsDate = broker === "das" || broker === "hammer";
+  const fileAccept = broker === "hammer" ? ".xlsx" : ".txt,.csv";
   const canPreview = file && (!needsDate || tradeDate);
 
   async function handlePreview() {
@@ -97,8 +98,10 @@ export function ImportForm() {
               onValueChange={(v) => {
                 if (!v) return;
                 setBroker(v);
+                setFile(null);
                 setPreview(null);
                 setResult(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
               }}
             >
               <SelectTrigger className="h-9 w-64 text-sm">
@@ -107,6 +110,7 @@ export function ImportForm() {
               <SelectContent>
                 <SelectItem value="sterling">Sterling Trader Pro</SelectItem>
                 <SelectItem value="das">DAS Trader Pro</SelectItem>
+                <SelectItem value="hammer">Hammer Pro</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -144,13 +148,15 @@ export function ImportForm() {
               ) : (
                 <>
                   <Upload className="mb-1.5 h-5 w-5 text-muted-foreground" />
-                  <p className="text-[13px] text-muted-foreground">Click to select a .txt or .csv file</p>
+                  <p className="text-[13px] text-muted-foreground">
+                    Click to select a {broker === "hammer" ? ".xlsx" : ".txt or .csv"} file
+                  </p>
                 </>
               )}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,.csv"
+                accept={fileAccept}
                 className="hidden"
                 onChange={(e) => {
                   setFile(e.target.files?.[0] ?? null);
