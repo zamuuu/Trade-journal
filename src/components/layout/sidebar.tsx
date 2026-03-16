@@ -10,6 +10,7 @@ import {
   BarChart3,
   BookOpen,
   Upload,
+  Settings,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
@@ -82,6 +83,33 @@ export function Sidebar() {
             );
           })}
         </nav>
+
+        {/* Bottom section */}
+        <div className="border-t border-border/50 px-3 py-2">
+          {(() => {
+            const isActive = pathname === "/settings" || pathname.startsWith("/settings");
+            return (
+              <Link
+                href="/settings"
+                title={collapsed ? "Settings" : undefined}
+                className={cn(
+                  "flex items-center rounded-lg transition-colors",
+                  collapsed
+                    ? "justify-center px-0 py-3"
+                    : "gap-3.5 px-3.5 py-3",
+                  isActive
+                    ? "bg-sidebar-accent text-foreground"
+                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
+                )}
+              >
+                <Settings className="h-5 w-5 shrink-0" />
+                {!collapsed && (
+                  <span className="text-[15px] font-medium">Settings</span>
+                )}
+              </Link>
+            );
+          })()}
+        </div>
       </aside>
     </div>
   );

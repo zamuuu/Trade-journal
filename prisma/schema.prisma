@@ -93,6 +93,11 @@ model DashboardConfig {
   widgets String // JSON array of { id, enabled, order }
 }
 
+model Settings {
+  id              String @id @default("default")
+  startingCapital Float  @default(0) // Account starting capital in dollars
+}
+
 model DayNote {
   id        String   @id @default(cuid())
   date      String   @unique  // "YYYY-MM-DD" format
