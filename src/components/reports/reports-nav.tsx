@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 const tabs = [
   { label: "Detailed", href: "/reports" },
@@ -11,6 +11,11 @@ const tabs = [
 
 export function ReportsNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Preserve query params (e.g. ?range=30d) when switching tabs
+  const query = searchParams.toString();
+  const suffix = query ? `?${query}` : "";
 
   return (
     <div className="flex items-center gap-1 border-b border-border">
@@ -19,7 +24,7 @@ export function ReportsNav() {
         return (
           <Link
             key={tab.href}
-            href={tab.href}
+            href={`${tab.href}${suffix}`}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${
               isActive
                 ? "text-foreground"

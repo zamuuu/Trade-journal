@@ -4,11 +4,23 @@ import { prisma } from "@/lib/db";
 import { calculateDetailedStats } from "@/lib/calculations/detailed-stats";
 import { DetailedStatsCard } from "@/components/reports/detailed-stats-card";
 import { ReportCharts } from "@/components/reports/report-charts";
+import { getDateCutoff } from "@/lib/date-range";
 import { format } from "date-fns";
 
-export default async function ReportsPage() {
+interface PageProps {
+  searchParams: Promise<{ range?: string }>;
+}
+
+export default async function ReportsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const cutoff = getDateCutoff(params.range);
+  const dateFilter = cutoff ? { gte: cutoff } : undefined;
+
   const trades = await prisma.trade.findMany({
-    where: { status: "CLOSED" },
+    where: {
+      status: "CLOSED",
+      ...(dateFilter && { entryDate: dateFilter }),
+    },
     orderBy: { entryDate: "asc" },
     select: {
       id: true,

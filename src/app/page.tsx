@@ -4,19 +4,9 @@ import { prisma } from "@/lib/db";
 import { calculateMetrics } from "@/lib/calculations/metrics";
 import { getDashboardConfig } from "@/actions/dashboard-actions";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
-import { SetupStats, DailyPnl, DayOfWeekPnl, PriceRangePnl } from "@/types";
+import { SetupStats, DailyPnl, DayOfWeekPnl, PriceRangePnl, HourRangePnl } from "@/types";
+import { getDateCutoff } from "@/lib/date-range";
 import { format } from "date-fns";
-
-// ── Helpers ──────────────────────────────────────────────────────
-
-function getDateCutoff(range: string | undefined): Date | null {
-  const days = range === "30d" ? 30 : range === "60d" ? 60 : range === "90d" ? 90 : null;
-  if (!days) return null;
-  const cutoff = new Date();
-  cutoff.setHours(0, 0, 0, 0);
-  cutoff.setDate(cutoff.getDate() - days);
-  return cutoff;
-}
 
 // ── Page ─────────────────────────────────────────────────────────
 
@@ -206,6 +196,38 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     tradeCount: b.tradeCount,
   }));
 
+  // Aggregate P&L by hour of day (7 AM – 7 PM based on entry time)
+  const HOUR_START = 7;  // 7 AM
+  const HOUR_END = 19;   // 7 PM (exclusive — last bucket is 6 PM)
+  function hourLabel(h: number): string {
+    if (h === 0) return "12 AM";
+    if (h < 12) return `${h} AM`;
+    if (h === 12) return "12 PM";
+    return `${h - 12} PM`;
+  }
+  const hourBuckets = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => ({
+    hour: HOUR_START + i,
+    label: hourLabel(HOUR_START + i),
+    pnl: 0,
+    tradeCount: 0,
+  }));
+  for (const t of trades) {
+    const h = new Date(t.entryDate).getHours();
+    const bucket = hourBuckets.find((b) => b.hour === h);
+    if (bucket) {
+      bucket.pnl = Math.round((bucket.pnl + t.pnl) * 100) / 100;
+      bucket.tradeCount++;
+    }
+  }
+  const totalAbsHourPnl = hourBuckets.reduce((sum, b) => sum + Math.abs(b.pnl), 0);
+  const hourRangePnl: HourRangePnl[] = hourBuckets.map((b) => ({
+    hour: b.hour,
+    label: b.label,
+    pnl: b.pnl,
+    percent: totalAbsHourPnl > 0 ? Math.round((Math.abs(b.pnl) / totalAbsHourPnl) * 10000) / 100 : 0,
+    tradeCount: b.tradeCount,
+  }));
+
   return (
     <WidgetGrid
       initialConfig={widgetConfig}
@@ -222,6 +244,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         last7Days,
         dayOfWeekPnl,
         priceRangePnl,
+        hourRangePnl,
       }}
     />
   );

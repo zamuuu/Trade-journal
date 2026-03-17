@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
 const RANGES = [
@@ -14,6 +14,7 @@ export type DateRangeValue = (typeof RANGES)[number]["value"];
 
 export function DateRangeFilter() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
@@ -29,7 +30,7 @@ export function DateRangeFilter() {
         params.set("range", value);
       }
       const query = params.toString();
-      router.push(query ? `/?${query}` : "/");
+      router.push(query ? `${pathname}?${query}` : pathname);
     });
   }
 

@@ -77,6 +77,12 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     size: "medium",
   },
   {
+    id: "pnl-by-hour",
+    name: "Performance By Time",
+    description: "P&L breakdown by hour of day (7 AM – 7 PM)",
+    size: "medium",
+  },
+  {
     id: "recent-trades",
     name: "Recent Trades",
     description: "Last 10 trades with PnL",

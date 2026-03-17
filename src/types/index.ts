@@ -119,6 +119,15 @@ export interface PriceRangePnl {
   tradeCount: number;
 }
 
+// P&L aggregated by hour of day (entry time)
+export interface HourRangePnl {
+  hour: number;     // 7 = 7 AM, 13 = 1 PM, etc.
+  label: string;    // "7 AM", "1 PM", etc.
+  pnl: number;
+  percent: number;  // % of total absolute P&L
+  tradeCount: number;
+}
+
 // All possible data the dashboard can pass to widgets
 export interface DashboardData {
   metrics: DashboardMetrics;
@@ -137,6 +146,7 @@ export interface DashboardData {
   last7Days: DailyPnl[];
   dayOfWeekPnl: DayOfWeekPnl[];
   priceRangePnl: PriceRangePnl[];
+  hourRangePnl: HourRangePnl[];
 }
 
 // Detailed reports stats (all 24 metrics for the Detailed tab)

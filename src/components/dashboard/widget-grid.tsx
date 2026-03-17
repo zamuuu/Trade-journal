@@ -45,6 +45,7 @@ import { PnlByPriceWidget } from "./pnl-by-price-widget";
 import { DailyPnlChartWidget } from "./daily-pnl-chart-widget";
 import { DrawdownWidget } from "./drawdown-widget";
 import { RiskRewardWidget } from "./risk-reward-widget";
+import { PnlByHourWidget } from "./pnl-by-hour-widget";
 import { DateRangeFilter } from "./date-range-filter";
 import { WidgetCustomizer } from "./widget-customizer";
 
@@ -360,6 +361,8 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
             avgLoss={data.metrics.averageLoss}
           />
         );
+      case "pnl-by-hour":
+        return <PnlByHourWidget hours={data.hourRangePnl} />;
       case "daily-pnl":
         return <DailyPnlChartWidget data={data.dailyPnl} />;
       case "drawdown":
