@@ -50,6 +50,12 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: "Donut chart showing winning vs losing trade ratio",
     size: "small",
   },
+  {
+    id: "risk-reward",
+    name: "Risk : Reward Ratio",
+    description: "Realized risk-to-reward ratio based on average win vs average loss",
+    size: "small",
+  },
 
   // ── Medium (1×2) ───────────────────────────────────────────────
   {

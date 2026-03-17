@@ -44,6 +44,8 @@ import { PnlByDayWidget } from "./pnl-by-day-widget";
 import { PnlByPriceWidget } from "./pnl-by-price-widget";
 import { DailyPnlChartWidget } from "./daily-pnl-chart-widget";
 import { DrawdownWidget } from "./drawdown-widget";
+import { RiskRewardWidget } from "./risk-reward-widget";
+import { DateRangeFilter } from "./date-range-filter";
 import { WidgetCustomizer } from "./widget-customizer";
 
 // ─── Grid size constants ─────────────────────────────────────────
@@ -351,6 +353,13 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
         );
       case "pnl-by-price":
         return <PnlByPriceWidget ranges={data.priceRangePnl} />;
+      case "risk-reward":
+        return (
+          <RiskRewardWidget
+            avgWin={data.metrics.averageWin}
+            avgLoss={data.metrics.averageLoss}
+          />
+        );
       case "daily-pnl":
         return <DailyPnlChartWidget data={data.dailyPnl} />;
       case "drawdown":
@@ -367,6 +376,7 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
       {/* Header toolbar */}
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold">Dashboard</h1>
+        <DateRangeFilter />
 
         {editMode ? (
           <>

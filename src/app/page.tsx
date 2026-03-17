@@ -7,10 +7,36 @@ import { WidgetGrid } from "@/components/dashboard/widget-grid";
 import { SetupStats, DailyPnl, DayOfWeekPnl, PriceRangePnl } from "@/types";
 import { format } from "date-fns";
 
-export default async function DashboardPage() {
+// ── Helpers ──────────────────────────────────────────────────────
+
+function getDateCutoff(range: string | undefined): Date | null {
+  const days = range === "30d" ? 30 : range === "60d" ? 60 : range === "90d" ? 90 : null;
+  if (!days) return null;
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - days);
+  return cutoff;
+}
+
+// ── Page ─────────────────────────────────────────────────────────
+
+interface PageProps {
+  searchParams: Promise<{ range?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const range = params.range;
+  const cutoff = getDateCutoff(range);
+
+  const dateFilter = cutoff ? { gte: cutoff } : undefined;
+
   const [trades, recentTrades, widgetConfig] = await Promise.all([
     prisma.trade.findMany({
-      where: { status: "CLOSED" },
+      where: {
+        status: "CLOSED",
+        ...(dateFilter && { entryDate: dateFilter }),
+      },
       orderBy: { entryDate: "asc" },
       select: {
         id: true,
@@ -26,6 +52,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.trade.findMany({
+      where: dateFilter ? { entryDate: dateFilter } : undefined,
       orderBy: { entryDate: "desc" },
       take: 10,
       select: {
