@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateStartingCapital } from "@/actions/settings-actions";
+import { updateStartingCapital, exportTradesCSV } from "@/actions/settings-actions";
 import { Button } from "@/components/ui/button";
-import { Save } from "lucide-react";
+import { Save, Download, Loader2, FileDown } from "lucide-react";
 
 interface SettingsFormProps {
   currentCapital: number;
@@ -131,6 +131,98 @@ export function SettingsForm({ currentCapital, totalPnl }: SettingsFormProps) {
                 </p>
               </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Export Trades */}
+      <ExportSection />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Export section                                                      */
+/* ------------------------------------------------------------------ */
+
+function ExportSection() {
+  const [exporting, setExporting] = useState(false);
+  const [result, setResult] = useState<{ success?: boolean; count?: number; error?: string } | null>(null);
+
+  async function handleExport() {
+    setExporting(true);
+    setResult(null);
+
+    try {
+      const { csv, count } = await exportTradesCSV();
+
+      if (count === 0) {
+        setResult({ error: "No trades to export." });
+        setExporting(false);
+        return;
+      }
+
+      // Trigger download in browser
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `trades_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setResult({ success: true, count });
+    } catch {
+      setResult({ error: "Failed to export trades." });
+    }
+
+    setExporting(false);
+  }
+
+  return (
+    <div className="rounded-md border border-border bg-card">
+      <div className="border-b border-border px-5 py-3.5">
+        <h2 className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground">
+          Export Data
+        </h2>
+      </div>
+      <div className="px-5 py-5 space-y-4">
+        <div className="space-y-1.5">
+          <p className="text-sm text-foreground">
+            Download all your trades as a CSV file.
+          </p>
+          <p className="text-[12px] text-muted-foreground">
+            Includes symbol, side, entry/exit dates, prices, quantity, PnL,
+            setup, rating, tags, and notes. Compatible with most trading
+            platforms and spreadsheet applications.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            className="h-9 gap-1.5 px-4"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            Export CSV
+          </Button>
+
+          {result?.success && (
+            <p className="flex items-center gap-1.5 text-[13px] text-profit">
+              <FileDown className="h-3.5 w-3.5" />
+              Exported {result.count} trade{result.count !== 1 ? "s" : ""}.
+            </p>
+          )}
+          {result?.error && (
+            <p className="text-[13px] text-loss">{result.error}</p>
           )}
         </div>
       </div>
