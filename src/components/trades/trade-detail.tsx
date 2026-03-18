@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -670,6 +672,8 @@ export function TradeDetail({
 }: TradeDetailProps) {
   const router = useRouter();
   const [notes, setNotes] = useState(trade.notes ?? "");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [setup, setSetup] = useState(trade.setup ?? "");
   const [newTag, setNewTag] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -912,19 +916,50 @@ export function TradeDetail({
               <div className="flex items-center gap-1.5">
                 <NoteTemplatesDropdown
                   templates={templates}
-                  onApply={handleApplyTemplate}
+                  onApply={(content) => {
+                    handleApplyTemplate(content);
+                    setEditingNotes(true);
+                  }}
                   currentNotes={notes}
                   onTemplatesChange={setTemplates}
                 />
               </div>
             </div>
-            <Textarea
-              placeholder="Write your notes about this trade... analysis, mistakes, what went well, lessons learned..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={10}
-              className="mb-3 min-h-[200px] text-sm leading-relaxed"
-            />
+
+            {editingNotes ? (
+              <Textarea
+                ref={notesTextareaRef}
+                placeholder="Write your notes about this trade... Supports **Markdown** syntax."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={() => setEditingNotes(false)}
+                rows={10}
+                className="mb-3 min-h-[200px] text-sm leading-relaxed font-mono"
+              />
+            ) : (
+              <div
+                onClick={() => {
+                  setEditingNotes(true);
+                  requestAnimationFrame(() => {
+                    notesTextareaRef.current?.focus();
+                  });
+                }}
+                className="mb-3 min-h-[200px] cursor-text rounded-lg border border-input bg-transparent px-2.5 py-2 transition-colors hover:border-ring/50"
+              >
+                {notes.trim() ? (
+                  <div className="markdown-notes">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {notes}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Click to add notes... Supports <strong>Markdown</strong> syntax.
+                  </p>
+                )}
+              </div>
+            )}
+
             <Button
               onClick={handleSaveNotes}
               disabled={savingNotes}
