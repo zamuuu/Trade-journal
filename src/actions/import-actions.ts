@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getParser } from "@/lib/csv/parser-registry";
 import { decodeFileContent } from "@/lib/csv/encoding";
@@ -175,4 +176,102 @@ async function filterDuplicates(
     }
   }
   return newTrades;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Manual trade entry                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface ManualTradeInput {
+  symbol: string;
+  side: "LONG" | "SHORT";
+  entryDateTime: string;   // ISO string  e.g. "2025-03-18T09:35"
+  exitDateTime: string;    // ISO string
+  entryPrice: number;
+  exitPrice: number;
+  quantity: number;
+}
+
+export async function manualImportTrade(input: ManualTradeInput) {
+  const { symbol, side, entryDateTime, exitDateTime, entryPrice, exitPrice, quantity } = input;
+
+  // Validations
+  if (!symbol || !symbol.trim()) return { error: "Symbol is required" };
+  if (!entryDateTime) return { error: "Entry date/time is required" };
+  if (!exitDateTime) return { error: "Exit date/time is required" };
+  if (entryPrice <= 0) return { error: "Entry price must be greater than 0" };
+  if (exitPrice <= 0) return { error: "Exit price must be greater than 0" };
+  if (quantity <= 0 || !Number.isInteger(quantity)) return { error: "Quantity must be a positive integer" };
+
+  const entryDate = new Date(entryDateTime);
+  const exitDate = new Date(exitDateTime);
+
+  if (isNaN(entryDate.getTime())) return { error: "Invalid entry date/time" };
+  if (isNaN(exitDate.getTime())) return { error: "Invalid exit date/time" };
+  if (exitDate <= entryDate) return { error: "Exit date/time must be after entry date/time" };
+
+  const upperSymbol = symbol.trim().toUpperCase();
+
+  // Calculate PnL
+  const pnl = side === "LONG"
+    ? (exitPrice - entryPrice) * quantity
+    : (entryPrice - exitPrice) * quantity;
+
+  // Determine execution sides
+  const entrySide = side === "LONG" ? "BUY" : "SELL_SHORT";
+  const exitSide = side === "LONG" ? "SELL" : "BUY";
+
+  // Check for duplicates
+  const existing = await prisma.trade.findFirst({
+    where: {
+      symbol: upperSymbol,
+      side,
+      entryDate,
+      totalQuantity: quantity,
+      pnl,
+    },
+  });
+
+  if (existing) return { error: "This trade already exists in the database" };
+
+  // Create trade with two synthetic executions (entry + exit)
+  await prisma.trade.create({
+    data: {
+      symbol: upperSymbol,
+      side,
+      status: "CLOSED",
+      entryDate,
+      exitDate,
+      totalQuantity: quantity,
+      avgEntryPrice: entryPrice,
+      avgExitPrice: exitPrice,
+      pnl,
+      executions: {
+        create: [
+          {
+            side: entrySide,
+            quantity,
+            price: entryPrice,
+            timestamp: entryDate,
+            rawData: JSON.stringify({ source: "manual" }),
+          },
+          {
+            side: exitSide,
+            quantity,
+            price: exitPrice,
+            timestamp: exitDate,
+            rawData: JSON.stringify({ source: "manual" }),
+          },
+        ],
+      },
+    },
+  });
+
+  revalidatePath("/trades");
+  revalidatePath("/");
+  revalidatePath("/calendar");
+  revalidatePath("/journal");
+  revalidatePath("/reports");
+
+  return { success: true, importedCount: 1 };
 }
