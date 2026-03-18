@@ -58,6 +58,13 @@ export function ImportForm() {
   const fileAccept = broker === "hammer" ? ".xlsx" : ".txt,.csv";
   const canPreview = file && (!needsDate || tradeDate);
 
+  const brokerLabel: Record<string, string> = {
+    sterling: "Sterling Trader Pro",
+    das: "DAS Trader Pro",
+    hammer: "Hammer Pro",
+    manual: "Manual Entry",
+  };
+
   // Computed PnL preview for manual entry
   const manualPnlPreview = (() => {
     const entry = parseFloat(manualEntryPrice);
@@ -161,7 +168,7 @@ export function ImportForm() {
       {/* Import method selector — always visible */}
       <div className="rounded-md border border-border bg-card p-4">
         <p className="mb-3 text-[13px] font-medium uppercase tracking-wider text-muted-foreground">
-          {isManual ? "Manual Entry" : "Upload File"}
+          {brokerLabel[broker] ?? broker}
         </p>
 
         <div className="space-y-3">
@@ -176,7 +183,7 @@ export function ImportForm() {
               }}
             >
               <SelectTrigger className="h-9 w-64 text-sm">
-                <SelectValue />
+                <SelectValue>{brokerLabel[broker] ?? broker}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="sterling">Sterling Trader Pro</SelectItem>
