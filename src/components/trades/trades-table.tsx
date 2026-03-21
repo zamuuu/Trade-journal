@@ -51,8 +51,9 @@ import {
   Tags,
   GitMerge,
   Split,
+  X,
 } from "lucide-react";
-import { useState, useMemo, useTransition, useEffect } from "react";
+import { useState, useMemo, useTransition, useEffect, useRef } from "react";
 import {
   bulkDeleteTrades,
   bulkAddTagToTrades,
@@ -140,6 +141,39 @@ export function TradesTable({
   const [symbolFilter, setSymbolFilter] = useState(filters.symbol ?? "");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // ── Persist filters in sessionStorage ─────────────────────
+  const STORAGE_KEY = "trades-filters";
+  const didRestore = useRef(false);
+
+  // Save filters to sessionStorage whenever they change
+  useEffect(() => {
+    const params = searchParams.toString();
+    if (params) {
+      sessionStorage.setItem(STORAGE_KEY, params);
+    }
+  }, [searchParams]);
+
+  // Restore filters from sessionStorage on mount if URL has none
+  useEffect(() => {
+    if (didRestore.current) return;
+    didRestore.current = true;
+    if (!searchParams.toString()) {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        router.replace("/trades?" + saved);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const FILTER_KEYS = ["symbol", "side", "setup", "tag", "dateFrom", "dateTo", "ratingMin", "ratingMax"];
+  const hasActiveFilters = FILTER_KEYS.some((key) => searchParams.has(key));
+
+  function clearFilters() {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setSymbolFilter("");
+    router.push("/trades");
+  }
 
   // ── Selection state ─────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -525,6 +559,19 @@ export function TradesTable({
             router.push("/trades?" + params.toString());
           }}
         />
+
+        {/* Clear filters */}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="h-9 gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear filters
+          </Button>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />

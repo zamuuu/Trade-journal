@@ -671,6 +671,16 @@ export function TradeDetail({
   noteTemplates: initialTemplates,
 }: TradeDetailProps) {
   const router = useRouter();
+  const [backHref, setBackHref] = useState("/trades");
+
+  // Restore back link with saved filters
+  useEffect(() => {
+    const saved = sessionStorage.getItem("trades-filters");
+    if (saved) {
+      setBackHref("/trades?" + saved);
+    }
+  }, []);
+
   const [notes, setNotes] = useState(trade.notes ?? "");
   const [editingNotes, setEditingNotes] = useState(false);
   const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -822,7 +832,7 @@ export function TradeDetail({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/trades">
+          <Link href={backHref}>
             <Button
               variant="ghost"
               size="sm"
