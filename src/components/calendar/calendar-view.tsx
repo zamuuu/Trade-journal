@@ -311,7 +311,7 @@ function ExpandedMonth({
       {/* Calendar grid with 8 columns (7 days + weekly total) */}
       <div className="overflow-hidden rounded-lg border-2 border-foreground/15 bg-card">
         {/* Column headers */}
-        <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,0.7fr)] border-b-2 border-foreground/15">
+        <div className="grid grid-cols-8 border-b-2 border-foreground/15">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
             <div
               key={d}
@@ -331,7 +331,7 @@ function ExpandedMonth({
         {weeks.map((week, wi) => (
           <div
             key={wi}
-            className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,0.7fr)]"
+            className="grid grid-cols-8"
           >
             {/* Day cells */}
             {week.map((d, di) => {
