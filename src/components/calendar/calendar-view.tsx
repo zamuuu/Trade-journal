@@ -66,9 +66,9 @@ function MiniMonth({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card px-5 pb-5 pt-4">
+    <div className="rounded-lg border border-border bg-card px-4 pb-3.5 pt-3">
       {/* Month header + Open button */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <span className="text-[15px] font-semibold text-foreground">
           {format(date, "MMMM, yyyy")}
         </span>
@@ -85,7 +85,7 @@ function MiniMonth({
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
           <div
             key={d}
-            className="py-1.5 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+            className="py-1 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
           >
             {d}
           </div>
@@ -113,7 +113,7 @@ function MiniMonth({
               <div
                 key={di}
                 onClick={hasData ? () => onDayClick(dayKey) : undefined}
-                className={`flex h-8 items-center justify-center text-[13px] ${bgClass} ${
+                className={`flex h-7 items-center justify-center text-[13px] ${bgClass} ${
                   !inMonth
                     ? "text-muted-foreground/25"
                     : today
@@ -125,7 +125,7 @@ function MiniMonth({
                       ? "font-medium text-loss"
                       : "text-muted-foreground"
                     : "text-muted-foreground/70"
-                } ${hasData ? "cursor-pointer rounded transition-colors hover:ring-1 hover:ring-primary/50" : ""}`}
+                } ${hasData ? "cursor-pointer transition-colors hover:bg-accent/50" : ""}`}
               >
                 {format(d, "d")}
               </div>
@@ -179,7 +179,7 @@ function YearOverview({
       </div>
 
       {/* 12-month grid: 3 columns */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2.5">
         {Array.from({ length: 12 }, (_, i) => (
           <MiniMonth
             key={i}
@@ -202,14 +202,14 @@ function ExpandedMonth({
   month,
   dayData,
   onBack,
-  onNavigateYear,
+  onNavigateMonth,
   onDayClick,
 }: {
   year: number;
   month: number; // 1-12
   dayData: Record<string, DayData>;
   onBack: () => void;
-  onNavigateYear: (dir: -1 | 1) => void;
+  onNavigateMonth: (dir: -1 | 1) => void;
   onDayClick: (dateKey: string) => void;
 }) {
   const date = new Date(year, month - 1, 1);
@@ -291,18 +291,15 @@ function ExpandedMonth({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onNavigateYear(-1)}
+              onClick={() => onNavigateMonth(-1)}
               className="h-8 w-8 p-0"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="rounded-md border border-border px-3 py-1 font-mono text-sm font-semibold tabular-nums">
-              {year}
-            </span>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onNavigateYear(1)}
+              onClick={() => onNavigateMonth(1)}
               className="h-8 w-8 p-0"
             >
               <ChevronRight className="h-4 w-4" />
@@ -314,7 +311,7 @@ function ExpandedMonth({
       {/* Calendar grid with 8 columns (7 days + weekly total) */}
       <div className="overflow-hidden rounded-lg border-2 border-foreground/15 bg-card">
         {/* Column headers */}
-        <div className="grid grid-cols-[repeat(7,1fr)_minmax(0,0.85fr)] border-b-2 border-foreground/15">
+        <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,0.7fr)] border-b-2 border-foreground/15">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
             <div
               key={d}
@@ -334,7 +331,7 @@ function ExpandedMonth({
         {weeks.map((week, wi) => (
           <div
             key={wi}
-            className="grid grid-cols-[repeat(7,1fr)_minmax(0,0.85fr)]"
+            className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,0.7fr)]"
           >
             {/* Day cells */}
             {week.map((d, di) => {
@@ -349,7 +346,7 @@ function ExpandedMonth({
                 <div
                   key={di}
                   onClick={hasData ? () => onDayClick(dayKey) : undefined}
-                  className={`min-h-[6.5rem] border-b-2 border-r-2 border-foreground/15 p-2.5 transition-colors ${
+                  className={`aspect-[1/0.75] border-b-2 border-r-2 border-foreground/15 p-2 transition-colors ${
                     !inMonth ? "bg-background/40" : ""
                   } ${hasData ? "cursor-pointer hover:bg-accent/50" : ""}`}
                 >
@@ -400,7 +397,7 @@ function ExpandedMonth({
             })}
 
             {/* Weekly total column */}
-            <div className="flex min-h-[6.5rem] flex-col justify-start border-b-2 border-foreground/15 bg-popover/50 p-2.5">
+            <div className="flex flex-col justify-start border-b-2 border-foreground/15 bg-popover/50 p-2">
               <span className="text-[15px] font-bold text-foreground">
                 Week {wi + 1}
               </span>
@@ -442,6 +439,20 @@ export function CalendarView({ year, month, dayData }: CalendarViewProps) {
     }
   }
 
+  function navigateMonth(dir: -1 | 1) {
+    if (month === null) return;
+    let newMonth = month + dir;
+    let newYear = year;
+    if (newMonth < 1) {
+      newMonth = 12;
+      newYear--;
+    } else if (newMonth > 12) {
+      newMonth = 1;
+      newYear++;
+    }
+    router.push(`/calendar?year=${newYear}&month=${newMonth}`);
+  }
+
   function openMonth(m: number) {
     router.push(`/calendar?year=${year}&month=${m}`);
   }
@@ -461,7 +472,7 @@ export function CalendarView({ year, month, dayData }: CalendarViewProps) {
         month={month}
         dayData={dayData}
         onBack={backToYear}
-        onNavigateYear={navigateYear}
+        onNavigateMonth={navigateMonth}
         onDayClick={goToJournalDay}
       />
     );
