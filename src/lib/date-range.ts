@@ -11,3 +11,33 @@ export function getDateCutoff(range: string | undefined): Date | null {
   cutoff.setDate(cutoff.getDate() - days);
   return cutoff;
 }
+
+/**
+ * Build an entryDate Prisma filter from search params.
+ * Supports both preset ranges (?range=30d) and custom date ranges (?dateFrom=...&dateTo=...).
+ * Custom date range takes priority over preset range.
+ */
+export function getDateFilter(params: {
+  range?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): { gte?: Date; lte?: Date } | undefined {
+  // Custom date range takes priority
+  if (params.dateFrom || params.dateTo) {
+    const filter: { gte?: Date; lte?: Date } = {};
+    if (params.dateFrom) {
+      const [y, m, d] = params.dateFrom.split("-").map(Number);
+      filter.gte = new Date(y, m - 1, d);
+    }
+    if (params.dateTo) {
+      const [y, m, d] = params.dateTo.split("-").map(Number);
+      // End of day so we include trades on that date
+      filter.lte = new Date(y, m - 1, d, 23, 59, 59, 999);
+    }
+    return filter;
+  }
+
+  // Fall back to preset range
+  const cutoff = getDateCutoff(params.range);
+  return cutoff ? { gte: cutoff } : undefined;
+}

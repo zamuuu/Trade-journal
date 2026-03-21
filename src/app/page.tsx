@@ -5,21 +5,18 @@ import { calculateMetrics } from "@/lib/calculations/metrics";
 import { getDashboardConfig } from "@/actions/dashboard-actions";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
 import { SetupStats, DailyPnl, DayOfWeekPnl, PriceRangePnl, HourRangePnl } from "@/types";
-import { getDateCutoff } from "@/lib/date-range";
+import { getDateFilter } from "@/lib/date-range";
 import { format } from "date-fns";
 
 // ── Page ─────────────────────────────────────────────────────────
 
 interface PageProps {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; dateFrom?: string; dateTo?: string }>;
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const range = params.range;
-  const cutoff = getDateCutoff(range);
-
-  const dateFilter = cutoff ? { gte: cutoff } : undefined;
+  const dateFilter = getDateFilter(params);
 
   const [trades, recentTrades, widgetConfig] = await Promise.all([
     prisma.trade.findMany({

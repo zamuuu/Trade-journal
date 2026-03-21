@@ -3,16 +3,15 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/db";
 import { calculateLongShortStats } from "@/lib/calculations/long-short-stats";
 import { LongShortCard } from "@/components/reports/long-short-card";
-import { getDateCutoff } from "@/lib/date-range";
+import { getDateFilter } from "@/lib/date-range";
 
 interface PageProps {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; dateFrom?: string; dateTo?: string }>;
 }
 
 export default async function LongVsShortPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const cutoff = getDateCutoff(params.range);
-  const dateFilter = cutoff ? { gte: cutoff } : undefined;
+  const dateFilter = getDateFilter(params);
 
   const trades = await prisma.trade.findMany({
     where: {

@@ -4,17 +4,16 @@ import { prisma } from "@/lib/db";
 import { calculateDetailedStats } from "@/lib/calculations/detailed-stats";
 import { DetailedStatsCard } from "@/components/reports/detailed-stats-card";
 import { ReportCharts } from "@/components/reports/report-charts";
-import { getDateCutoff } from "@/lib/date-range";
+import { getDateFilter } from "@/lib/date-range";
 import { format } from "date-fns";
 
 interface PageProps {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; dateFrom?: string; dateTo?: string }>;
 }
 
 export default async function ReportsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const cutoff = getDateCutoff(params.range);
-  const dateFilter = cutoff ? { gte: cutoff } : undefined;
+  const dateFilter = getDateFilter(params);
 
   const trades = await prisma.trade.findMany({
     where: {
