@@ -942,7 +942,10 @@ export function TradeDetail({
                 placeholder="Write your notes about this trade... Supports **Markdown** syntax."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                onBlur={() => setEditingNotes(false)}
+                onBlur={() => {
+                  setEditingNotes(false);
+                  handleSaveNotes();
+                }}
                 rows={10}
                 className="mb-3 min-h-[200px] text-sm leading-relaxed font-mono"
               />
@@ -970,17 +973,6 @@ export function TradeDetail({
               </div>
             )}
 
-            <Button
-              onClick={handleSaveNotes}
-              disabled={savingNotes}
-              size="sm"
-              className="h-8"
-            >
-              {savingNotes ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : null}
-              Save Notes
-            </Button>
           </div>
 
           {/* Screenshots by category */}
