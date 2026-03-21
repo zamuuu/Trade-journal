@@ -113,7 +113,7 @@ function MiniMonth({
               <div
                 key={di}
                 onClick={hasData ? () => onDayClick(dayKey) : undefined}
-                className={`flex h-7 items-center justify-center text-[13px] ${bgClass} ${
+                className={`flex h-9 items-center justify-center text-[13px] ${bgClass} ${
                   !inMonth
                     ? "text-muted-foreground/25"
                     : today
@@ -372,7 +372,7 @@ function ExpandedMonth({
                   {inMonth && (
                     <div className="mt-1.5">
                       <div
-                        className={`font-mono text-[13px] font-semibold tabular-nums ${
+                        className={`font-mono text-[15px] font-bold tabular-nums ${
                           data
                             ? data.pnl > 0
                               ? "text-profit"
@@ -386,7 +386,7 @@ function ExpandedMonth({
                           ? `${data.pnl >= 0 ? "+" : ""}$${data.pnl.toFixed(2)}`
                           : "$0"}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-[12px] text-muted-foreground">
                         {data ? data.tradeCount : 0} trade
                         {(!data || data.tradeCount !== 1) ? "s" : ""}
                       </div>
@@ -402,7 +402,7 @@ function ExpandedMonth({
                 Week {wi + 1}
               </span>
               <div
-                className={`mt-1.5 font-mono text-[13px] font-semibold tabular-nums ${
+                className={`mt-1.5 font-mono text-[15px] font-bold tabular-nums ${
                   weeklyTotals[wi].pnl > 0
                     ? "text-profit"
                     : weeklyTotals[wi].pnl < 0
@@ -413,7 +413,7 @@ function ExpandedMonth({
                 {weeklyTotals[wi].pnl >= 0 ? "+" : ""}$
                 {weeklyTotals[wi].pnl.toFixed(2)}
               </div>
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-[12px] text-muted-foreground">
                 {weeklyTotals[wi].tradeCount} trade
                 {weeklyTotals[wi].tradeCount !== 1 ? "s" : ""}
               </div>
