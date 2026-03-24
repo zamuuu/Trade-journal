@@ -4,6 +4,38 @@ A personal trading journal for day traders. Import executions from your broker, 
 
 Runs entirely on localhost. No accounts, no cloud, no external APIs. SQLite is the single source of truth.
 
+## Preview
+
+### Dashboard
+Configurable widget grid with cumulative PnL, P&L by setup, performance by day/time, and more.
+
+![Dashboard](docs/dashboard.png)
+
+### Trades
+Sortable table with filters by symbol, side, setup, tags, date range, and rating.
+
+![Trades](docs/trades.png)
+
+### Trade Detail
+Full breakdown of each trade: notes with Markdown, screenshots with lightbox, setup, tags, rating, and execution history.
+
+![Trade Detail](docs/trade-detail.png)
+
+### Journal
+Day-by-day view with daily metrics, notes (autosave on blur), tags, and trade summaries.
+
+![Journal](docs/journal.png)
+
+### Calendar
+12-month year overview with daily P&L color coding and weekly totals.
+
+![Calendar](docs/calendar.png)
+
+### Reports
+24 detailed metrics (SQN, Kelly %, K-Ratio, profit factor), daily PnL chart, drawdown chart, and comparisons.
+
+![Reports](docs/reports.png)
+
 ## Features
 
 - **Multi-broker import** -- Sterling Trader Pro (TXT), DAS Trader Pro (CSV), Hammer Pro (XLSX)
