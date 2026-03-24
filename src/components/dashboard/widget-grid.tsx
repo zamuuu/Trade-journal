@@ -76,6 +76,22 @@ function spanHeight(rowSpan: number): number {
   return ROW_H * rowSpan + GAP * (rowSpan - 1);
 }
 
+// ─── Preview constants ───────────────────────────────────────────
+const PREVIEW_ROW_H = 48; // row height in the mini-preview (px)
+const PREVIEW_GAP = 4; // gap in the mini-preview (px)
+
+/** Colour palette for preview blocks — cycles through these */
+const PREVIEW_COLORS = [
+  { bg: "bg-blue-500/15", border: "border-blue-500/30", text: "text-blue-400" },
+  { bg: "bg-emerald-500/15", border: "border-emerald-500/30", text: "text-emerald-400" },
+  { bg: "bg-violet-500/15", border: "border-violet-500/30", text: "text-violet-400" },
+  { bg: "bg-amber-500/15", border: "border-amber-500/30", text: "text-amber-400" },
+  { bg: "bg-rose-500/15", border: "border-rose-500/30", text: "text-rose-400" },
+  { bg: "bg-cyan-500/15", border: "border-cyan-500/30", text: "text-cyan-400" },
+  { bg: "bg-orange-500/15", border: "border-orange-500/30", text: "text-orange-400" },
+  { bg: "bg-pink-500/15", border: "border-pink-500/30", text: "text-pink-400" },
+];
+
 // ─── Types ───────────────────────────────────────────────────────
 
 interface WidgetGridProps {
@@ -83,13 +99,76 @@ interface WidgetGridProps {
   data: DashboardData;
 }
 
+// ─── Grid Preview (mini grid shown in edit mode) ─────────────────
+
+function GridPreview({
+  widgets,
+  activeId,
+}: {
+  widgets: WidgetConfig[];
+  activeId: string | null;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card/50 p-3">
+      <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        Preview
+      </p>
+      <div
+        className="grid"
+        style={{
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gridAutoRows: `${PREVIEW_ROW_H}px`,
+          gridAutoFlow: "dense",
+          gap: `${PREVIEW_GAP}px`,
+        }}
+      >
+        {widgets.map((w, i) => {
+          const def = getWidgetDefinition(w.id);
+          if (!def) return null;
+          const { colSpan, rowSpan } = sizeToGrid(def.size);
+          const color = PREVIEW_COLORS[i % PREVIEW_COLORS.length];
+          const isActive = activeId === w.id;
+          const height =
+            PREVIEW_ROW_H * rowSpan + PREVIEW_GAP * (rowSpan - 1);
+
+          return (
+            <div
+              key={w.id}
+              className={`flex items-center justify-center rounded border px-1 transition-all duration-200 ${
+                isActive
+                  ? "border-primary bg-primary/20 ring-1 ring-primary/40 scale-[1.03]"
+                  : `${color.bg} ${color.border}`
+              }`}
+              style={{
+                gridColumn: `span ${colSpan}`,
+                gridRow: `span ${rowSpan}`,
+                height: `${height}px`,
+              }}
+            >
+              <span
+                className={`text-[10px] font-medium leading-tight text-center truncate ${
+                  isActive ? "text-primary" : color.text
+                }`}
+              >
+                {def.name}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Sortable Edit Row (compact list item for edit mode) ─────────
 
 function SortableEditRow({
   id,
+  index,
   onRemove,
 }: {
   id: string;
+  index: number;
   onRemove: () => void;
 }) {
   const def = getWidgetDefinition(id);
@@ -110,13 +189,14 @@ function SortableEditRow({
   };
 
   const sizeLabel = def?.size ?? "small";
+  const color = PREVIEW_COLORS[index % PREVIEW_COLORS.length];
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
+      className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
     >
       <button
         ref={setActivatorNodeRef}
@@ -126,6 +206,7 @@ function SortableEditRow({
       >
         <GripVertical className="h-4 w-4" />
       </button>
+      <div className={`h-3 w-3 rounded-sm ${color.bg} ${color.border} border`} />
       <span className="flex-1 text-sm font-medium">
         {def?.name ?? id}
       </span>
@@ -432,7 +513,7 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
         )}
       </div>
 
-      {/* ── Edit mode: simple sortable vertical list ── */}
+      {/* ── Edit mode: sortable list + grid preview ── */}
       {editMode ? (
         <DndContext
           sensors={sensors}
@@ -440,24 +521,36 @@ export function WidgetGrid({ initialConfig, data }: WidgetGridProps) {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext
-            items={enabledWidgets.map((w) => w.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="flex flex-col gap-2">
-              {enabledWidgets.map((w) => (
-                <SortableEditRow
-                  key={w.id}
-                  id={w.id}
-                  onRemove={() => removeWidget(w.id)}
-                />
-              ))}
+          <div className="flex gap-5">
+            {/* Left: sortable list */}
+            <SortableContext
+              items={enabledWidgets.map((w) => w.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex w-[340px] shrink-0 flex-col gap-1.5">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Drag to reorder
+                </p>
+                {enabledWidgets.map((w, i) => (
+                  <SortableEditRow
+                    key={w.id}
+                    id={w.id}
+                    index={i}
+                    onRemove={() => removeWidget(w.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+
+            {/* Right: live grid preview */}
+            <div className="flex-1 min-w-0">
+              <GridPreview widgets={enabledWidgets} activeId={activeId} />
             </div>
-          </SortableContext>
+          </div>
 
           <DragOverlay>
             {activeId ? (
-              <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-card px-3 py-2.5 opacity-90 shadow-lg">
+              <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-card px-3 py-2 opacity-90 shadow-lg">
                 <GripVertical className="h-4 w-4 text-muted-foreground/60" />
                 <span className="text-sm font-medium">
                   {getWidgetDefinition(activeId)?.name ?? activeId}
