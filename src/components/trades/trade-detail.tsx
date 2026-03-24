@@ -1100,23 +1100,17 @@ export function TradeDetail({
                   value={ratingInput}
                   onChange={(e) => setRatingInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveRating();
+                    if (e.key === "Enter") {
+                      (e.target as HTMLInputElement).blur();
+                    }
                   }}
+                  onBlur={() => handleSaveRating()}
                   placeholder="1-100"
                   className="h-8 w-20 text-sm tabular-nums"
                 />
-                <Button
-                  onClick={handleSaveRating}
-                  size="sm"
-                  className="h-8 px-3"
-                  disabled={savingRating}
-                >
-                  {savingRating ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
-                  )}
-                </Button>
+                {savingRating && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                )}
                 {ratingInput.trim() && (
                   <Button
                     variant="ghost"

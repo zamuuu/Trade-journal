@@ -237,6 +237,9 @@ export function DayCard({ day, allTags, noteTemplates }: DayCardProps) {
             setNotes(e.target.value);
             setNotesDirty(true);
           }}
+          onBlur={() => {
+            if (notesDirty) handleSaveNotes();
+          }}
           placeholder="Click here to start typing your notes..."
           className="min-h-[80px] resize-y bg-input/50 border-border text-sm"
         />
@@ -267,20 +270,11 @@ export function DayCard({ day, allTags, noteTemplates }: DayCardProps) {
               )}
             </div>
           )}
-          {notesDirty && (
-            <Button
-              size="sm"
-              className="text-xs"
-              onClick={handleSaveNotes}
-              disabled={savingNotes}
-            >
-              {savingNotes ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Save className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Save notes
-            </Button>
+          {savingNotes && (
+            <span className="flex items-center text-xs text-muted-foreground">
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              Saving...
+            </span>
           )}
         </div>
       </div>
