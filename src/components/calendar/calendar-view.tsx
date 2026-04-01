@@ -9,7 +9,6 @@ import {
   endOfWeek,
   addDays,
   isSameMonth,
-  isToday,
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -81,7 +80,7 @@ function MiniMonth({
       </div>
 
       {/* Day-of-week headers */}
-      <div className="grid grid-cols-7 gap-0">
+      <div className="grid grid-cols-7 gap-[3px]">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
           <div
             key={d}
@@ -93,46 +92,45 @@ function MiniMonth({
       </div>
 
       {/* Day cells */}
-      {weeks.map((week, wi) => (
-        <div key={wi} className="grid grid-cols-7 gap-0">
-          {week.map((d, di) => {
-            const dayKey = format(d, "yyyy-MM-dd");
-            const data = dayData[dayKey];
-            const inMonth = isSameMonth(d, date);
-            const today = isToday(d);
+      <div className="flex flex-col gap-[3px]">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 gap-[3px]">
+            {week.map((d, di) => {
+              const dayKey = format(d, "yyyy-MM-dd");
+              const data = dayData[dayKey];
+              const inMonth = isSameMonth(d, date);
 
-            let bgClass = "";
-            if (data && inMonth) {
-              if (data.pnl > 0) bgClass = "bg-profit/20";
-              else if (data.pnl < 0) bgClass = "bg-loss/20";
-            }
+              let bgClass = "";
+              if (data && inMonth) {
+                if (data.pnl > 0) bgClass = "bg-profit/20";
+                else if (data.pnl < 0) bgClass = "bg-loss/20";
+              }
 
-            const hasData = inMonth && data && data.tradeCount > 0;
+              const hasData = inMonth && data && data.tradeCount > 0;
 
-            return (
-              <div
-                key={di}
-                onClick={hasData ? () => onDayClick(dayKey) : undefined}
-                className={`flex h-9 items-center justify-center text-[13px] ${bgClass} ${
-                  !inMonth
-                    ? "text-muted-foreground/25"
-                    : today
-                    ? "font-bold text-primary"
-                    : data
-                    ? data.pnl > 0
-                      ? "font-medium text-profit"
-                      : data.pnl < 0
-                      ? "font-medium text-loss"
-                      : "text-muted-foreground"
-                    : "text-muted-foreground/70"
-                } ${hasData ? "cursor-pointer transition-colors hover:bg-accent/50" : ""}`}
-              >
-                {format(d, "d")}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+              return (
+                <div
+                  key={di}
+                  onClick={hasData ? () => onDayClick(dayKey) : undefined}
+                  className={`flex h-[38px] items-center justify-center rounded-[4px] text-[13px] ${bgClass} ${
+                    !inMonth
+                      ? "text-muted-foreground/25"
+                      : data
+                      ? data.pnl > 0
+                        ? "font-medium text-profit"
+                        : data.pnl < 0
+                        ? "font-medium text-loss"
+                        : "text-muted-foreground"
+                      : "text-muted-foreground/70"
+                  } ${hasData ? "cursor-pointer transition-colors hover:bg-accent/50" : ""}`}
+                >
+                  {format(d, "d")}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -335,10 +333,9 @@ function ExpandedMonth({
           >
             {/* Day cells */}
             {week.map((d, di) => {
-              const dayKey = format(d, "yyyy-MM-dd");
+               const dayKey = format(d, "yyyy-MM-dd");
               const data = dayData[dayKey];
               const inMonth = isSameMonth(d, date);
-              const today = isToday(d);
 
               const hasData = inMonth && data && data.tradeCount > 0;
 
@@ -355,15 +352,13 @@ function ExpandedMonth({
                       className={`text-lg font-bold ${
                         !inMonth
                           ? "text-muted-foreground/20"
-                          : today
-                          ? "text-primary"
                           : data
                           ? data.pnl > 0
                             ? "text-profit"
                             : data.pnl < 0
                             ? "text-loss"
                             : "text-foreground"
-                          : "text-foreground/70"
+                          : "text-foreground"
                       }`}
                     >
                       {format(d, "d")}
