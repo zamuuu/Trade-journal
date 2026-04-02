@@ -346,8 +346,8 @@ function ExpandedMonth({
                   } ${hasData ? "cursor-pointer hover:bg-accent/50" : ""}`}
                 >
                   <div className="flex items-start justify-between">
-                    <span
-                      className={`text-lg font-bold ${
+                     <span
+                      className={`text-2xl font-semibold ${
                         !inMonth
                           ? "text-muted-foreground/20"
                           : data
@@ -365,7 +365,7 @@ function ExpandedMonth({
                   {inMonth && (
                     <div className="mt-1.5">
                       <div
-                        className={`text-[15px] font-bold tabular-nums ${
+                        className={`text-lg font-bold tabular-nums ${
                           data
                             ? data.pnl > 0
                               ? "text-profit"
@@ -379,7 +379,7 @@ function ExpandedMonth({
                           ? `${data.pnl >= 0 ? "+" : ""}$${data.pnl.toFixed(2)}`
                           : "$0"}
                       </div>
-                      <div className="text-[12px] text-muted-foreground">
+                      <div className="text-[13px] text-muted-foreground">
                         {data ? data.tradeCount : 0} trade
                         {(!data || data.tradeCount !== 1) ? "s" : ""}
                       </div>
