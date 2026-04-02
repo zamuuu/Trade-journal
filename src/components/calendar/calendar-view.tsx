@@ -271,10 +271,10 @@ function ExpandedMonth({
           </h1>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-[13px] text-muted-foreground">
+          <span className="text-base text-muted-foreground">
             Monthly P&L:{" "}
             <span
-              className={`font-semibold tabular-nums ${
+              className={`text-lg font-semibold tabular-nums ${
                 roundedMonthPnl > 0
                   ? "text-profit"
                   : roundedMonthPnl < 0
