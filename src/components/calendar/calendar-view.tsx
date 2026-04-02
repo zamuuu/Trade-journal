@@ -274,7 +274,7 @@ function ExpandedMonth({
           <span className="text-[13px] text-muted-foreground">
             Monthly P&L:{" "}
             <span
-              className={`font-mono font-semibold tabular-nums ${
+              className={`font-semibold tabular-nums ${
                 roundedMonthPnl > 0
                   ? "text-profit"
                   : roundedMonthPnl < 0
@@ -307,15 +307,13 @@ function ExpandedMonth({
       </div>
 
       {/* Calendar grid with 8 columns (7 days + weekly total) */}
-      <div className="overflow-hidden rounded-lg border-2 border-foreground/15 bg-card">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         {/* Column headers */}
-        <div className="grid grid-cols-8 border-b-2 border-foreground/15">
+        <div className="grid grid-cols-8 border-b border-border">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
             <div
               key={d}
-              className={`py-2.5 text-center text-[13px] font-medium tracking-wide ${
-                i >= 5 ? "text-muted-foreground/60" : "text-muted-foreground"
-              }`}
+              className="py-2.5 text-center text-[13px] font-medium tracking-wide text-muted-foreground"
             >
               {d}
             </div>
@@ -343,8 +341,8 @@ function ExpandedMonth({
                 <div
                   key={di}
                   onClick={hasData ? () => onDayClick(dayKey) : undefined}
-                  className={`aspect-[1/0.75] border-b-2 border-r-2 border-foreground/15 p-2 transition-colors ${
-                    !inMonth ? "bg-background/40" : ""
+                  className={`aspect-[1/0.75] border-b border-r border-border p-2 transition-colors ${
+                    !inMonth ? "bg-background/60" : ""
                   } ${hasData ? "cursor-pointer hover:bg-accent/50" : ""}`}
                 >
                   <div className="flex items-start justify-between">
@@ -367,14 +365,14 @@ function ExpandedMonth({
                   {inMonth && (
                     <div className="mt-1.5">
                       <div
-                        className={`font-mono text-[15px] font-bold tabular-nums ${
+                        className={`text-[15px] font-bold tabular-nums ${
                           data
                             ? data.pnl > 0
                               ? "text-profit"
                               : data.pnl < 0
                               ? "text-loss"
                               : "text-flat"
-                            : "text-muted-foreground/30"
+                            : "text-muted-foreground/50"
                         }`}
                       >
                         {data
@@ -392,23 +390,23 @@ function ExpandedMonth({
             })}
 
             {/* Weekly total column */}
-            <div className="flex flex-col justify-start border-b-2 border-foreground/15 bg-popover/50 p-2">
-              <span className="text-[15px] font-bold text-foreground">
+            <div className="flex flex-col justify-start border-b border-border p-2">
+              <span className="text-xl font-bold text-foreground">
                 Week {wi + 1}
               </span>
               <div
-                className={`mt-1.5 font-mono text-[15px] font-bold tabular-nums ${
+                className={`mt-1 text-lg font-bold tabular-nums ${
                   weeklyTotals[wi].pnl > 0
                     ? "text-profit"
                     : weeklyTotals[wi].pnl < 0
                     ? "text-loss"
-                    : "text-flat"
+                    : "text-foreground"
                 }`}
               >
                 {weeklyTotals[wi].pnl >= 0 ? "+" : ""}$
                 {weeklyTotals[wi].pnl.toFixed(2)}
               </div>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-[13px] text-muted-foreground">
                 {weeklyTotals[wi].tradeCount} trade
                 {weeklyTotals[wi].tradeCount !== 1 ? "s" : ""}
               </div>
