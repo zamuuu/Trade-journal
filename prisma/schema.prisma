@@ -31,6 +31,7 @@ model Trade {
   @@index([symbol])
   @@index([entryDate])
   @@index([status])
+  @@index([status, entryDate])
 }
 
 model Execution {
@@ -106,8 +107,6 @@ model DayNote {
   updatedAt DateTime @updatedAt
 
   tags DayNoteTag[]
-
-  @@index([date])
 }
 
 model DayNoteTag {

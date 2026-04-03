@@ -15,29 +15,19 @@ function buildParserOptions(formData: FormData): Record<string, string> {
   return opts;
 }
 
-export async function previewImport(formData: FormData) {
-  const file = formData.get("file") as File;
-  const brokerId = formData.get("broker") as string;
-
-  if (!file || !brokerId) {
-    return { error: "File and broker are required" };
-  }
-
+/** Parse file into reconstructed trades (shared between preview and confirm). */
+function parseFile(
+  buffer: ArrayBuffer,
+  brokerId: string,
+  options: Record<string, string>
+): { trades: ReconstructedTrade[]; totalExecutions: number; skippedExecutions: number } | { error: string } {
   const parser = getParser(brokerId);
-  if (!parser) {
-    return { error: `Unknown broker: ${brokerId}` };
-  }
-
-  // Read file and parse executions
-  const buffer = await file.arrayBuffer();
-  const options = buildParserOptions(formData);
+  if (!parser) return { error: `Unknown broker: ${brokerId}` };
 
   let executions: NormalizedExecution[];
   if (parser.parseBinary) {
-    // Binary format (e.g. XLSX) — parser handles decoding internally
     executions = parser.parseBinary(buffer, options);
   } else {
-    // Text format (TXT, CSV) — decode encoding first, then parse
     const content = decodeFileContent(buffer);
     executions = parser.parse(content, options);
   }
@@ -46,21 +36,87 @@ export async function previewImport(formData: FormData) {
     return { error: "No valid executions found in the file" };
   }
 
-  // Reconstruct trades
   const trades = reconstructTrades(executions);
-
-  // Check for duplicates
-  const duplicateCount = await countDuplicates(trades);
-
   const totalExecutions = executions.length;
-  const skippedCount = totalExecutions - trades.reduce((sum, t) => sum + t.executions.length, 0);
+  const skippedExecutions = totalExecutions - trades.reduce((sum, t) => sum + t.executions.length, 0);
+
+  return { trades, totalExecutions, skippedExecutions };
+}
+
+/**
+ * Batch duplicate detection: fetches all potentially matching trades in ONE query,
+ * then compares in memory. Replaces the previous N+1 pattern.
+ */
+async function findDuplicateSet(
+  trades: ReconstructedTrade[]
+): Promise<Set<number>> {
+  if (trades.length === 0) return new Set();
+
+  // Get the date range of all incoming trades
+  const dates = trades.map((t) => t.entryDate);
+  const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+  const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+
+  // Fetch all existing trades in that date range with ONE query
+  const existing = await prisma.trade.findMany({
+    where: {
+      entryDate: { gte: minDate, lte: maxDate },
+    },
+    select: {
+      symbol: true,
+      side: true,
+      entryDate: true,
+      totalQuantity: true,
+      pnl: true,
+    },
+  });
+
+  // Build a Set of hash keys for fast lookup
+  const existingKeys = new Set(
+    existing.map(
+      (t) =>
+        `${t.symbol}_${t.side}_${t.entryDate.getTime()}_${t.totalQuantity}_${t.pnl}`
+    )
+  );
+
+  // Check which incoming trades match
+  const duplicateIndices = new Set<number>();
+  for (let i = 0; i < trades.length; i++) {
+    const t = trades[i];
+    const key = `${t.symbol}_${t.side}_${t.entryDate.getTime()}_${t.totalQuantity}_${t.pnl}`;
+    if (existingKeys.has(key)) {
+      duplicateIndices.add(i);
+    }
+  }
+
+  return duplicateIndices;
+}
+
+export async function previewImport(formData: FormData) {
+  const file = formData.get("file") as File;
+  const brokerId = formData.get("broker") as string;
+
+  if (!file || !brokerId) {
+    return { error: "File and broker are required" };
+  }
+
+  const buffer = await file.arrayBuffer();
+  const options = buildParserOptions(formData);
+  const result = parseFile(buffer, brokerId, options);
+
+  if ("error" in result) return { error: result.error };
+
+  const { trades, totalExecutions, skippedExecutions } = result;
+
+  // Batch duplicate check (single DB query instead of N queries)
+  const duplicateSet = await findDuplicateSet(trades);
 
   return {
     trades,
-    duplicateCount,
+    duplicateCount: duplicateSet.size,
     totalExecutions,
-    skippedExecutions: skippedCount,
-    newTradesCount: trades.length - duplicateCount,
+    skippedExecutions: skippedExecutions,
+    newTradesCount: trades.length - duplicateSet.size,
   };
 }
 
@@ -72,110 +128,65 @@ export async function confirmImport(formData: FormData) {
     return { error: "File and broker are required" };
   }
 
-  const parser = getParser(brokerId);
-  if (!parser) {
-    return { error: `Unknown broker: ${brokerId}` };
-  }
-
   const buffer = await file.arrayBuffer();
   const options = buildParserOptions(formData);
+  const result = parseFile(buffer, brokerId, options);
 
-  let executions: NormalizedExecution[];
-  if (parser.parseBinary) {
-    executions = parser.parseBinary(buffer, options);
-  } else {
-    const content = decodeFileContent(buffer);
-    executions = parser.parse(content, options);
-  }
+  if ("error" in result) return { error: result.error };
 
-  const trades = reconstructTrades(executions);
+  const { trades } = result;
 
   if (trades.length === 0) {
     return { error: "No trades to import" };
   }
 
-  // Filter out duplicates
-  const newTrades = await filterDuplicates(trades);
+  // Batch duplicate check (single DB query)
+  const duplicateSet = await findDuplicateSet(trades);
+  const newTrades = trades.filter((_, i) => !duplicateSet.has(i));
 
   if (newTrades.length === 0) {
     return { error: "All trades already exist in the database" };
   }
 
-  // Save to database
-  let importedCount = 0;
-  for (const trade of newTrades) {
-    await prisma.trade.create({
-      data: {
-        symbol: trade.symbol,
-        side: trade.side,
-        status: trade.status,
-        entryDate: trade.entryDate,
-        exitDate: trade.exitDate,
-        totalQuantity: trade.totalQuantity,
-        avgEntryPrice: trade.avgEntryPrice,
-        avgExitPrice: trade.avgExitPrice,
-        pnl: trade.pnl,
-        executions: {
-          create: trade.executions.map((exec) => ({
-            side: exec.side,
-            quantity: exec.quantity,
-            price: exec.price,
-            timestamp: exec.timestamp,
-            rawData: JSON.stringify(exec.rawData),
-          })),
+  // Save to database in a single transaction (atomic + faster)
+  const importedCount = await prisma.$transaction(async (tx) => {
+    let count = 0;
+    for (const trade of newTrades) {
+      await tx.trade.create({
+        data: {
+          symbol: trade.symbol,
+          side: trade.side,
+          status: trade.status,
+          entryDate: trade.entryDate,
+          exitDate: trade.exitDate,
+          totalQuantity: trade.totalQuantity,
+          avgEntryPrice: trade.avgEntryPrice,
+          avgExitPrice: trade.avgExitPrice,
+          pnl: trade.pnl,
+          executions: {
+            create: trade.executions.map((exec) => ({
+              side: exec.side,
+              quantity: exec.quantity,
+              price: exec.price,
+              timestamp: exec.timestamp,
+              rawData: JSON.stringify(exec.rawData),
+            })),
+          },
         },
-      },
-    });
-    importedCount++;
-  }
+      });
+      count++;
+    }
+    return count;
+  });
+
+  // Revalidate all affected pages
+  revalidatePath("/trades");
+  revalidatePath("/");
+  revalidatePath("/calendar");
+  revalidatePath("/journal");
+  revalidatePath("/reports");
 
   return { success: true, importedCount };
-}
-
-/**
- * Generates a unique hash for a trade based on its key properties
- * to detect duplicates.
- */
-function tradeHash(trade: ReconstructedTrade): string {
-  return `${trade.symbol}_${trade.side}_${trade.entryDate.toISOString()}_${trade.totalQuantity}_${trade.pnl}`;
-}
-
-async function countDuplicates(trades: ReconstructedTrade[]): Promise<number> {
-  let count = 0;
-  for (const trade of trades) {
-    const existing = await prisma.trade.findFirst({
-      where: {
-        symbol: trade.symbol,
-        side: trade.side,
-        entryDate: trade.entryDate,
-        totalQuantity: trade.totalQuantity,
-        pnl: trade.pnl,
-      },
-    });
-    if (existing) count++;
-  }
-  return count;
-}
-
-async function filterDuplicates(
-  trades: ReconstructedTrade[]
-): Promise<ReconstructedTrade[]> {
-  const newTrades: ReconstructedTrade[] = [];
-  for (const trade of trades) {
-    const existing = await prisma.trade.findFirst({
-      where: {
-        symbol: trade.symbol,
-        side: trade.side,
-        entryDate: trade.entryDate,
-        totalQuantity: trade.totalQuantity,
-        pnl: trade.pnl,
-      },
-    });
-    if (!existing) {
-      newTrades.push(trade);
-    }
-  }
-  return newTrades;
 }
 
 /* ------------------------------------------------------------------ */
